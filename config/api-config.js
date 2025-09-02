@@ -4,17 +4,62 @@
 export const API_CONFIG = {
   // OpenAI Configuration
   OPENAI: {
-    API_KEY: 'YOUR_OPENAI_API_KEY_HERE', // Get from https://platform.openai.com/api-keys
-    MODEL: 'gpt-3.5-turbo-1106', // or 'gpt-4' for better quality
-    MAX_TOKENS: 1000,
-    TEMPERATURE: 0.3,
-    BASE_URL: 'https://api.openai.com/v1'
+    API_KEY: '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', // Get from https://platform.openai.com/api-keys
+    BASE_URL: 'https://api.openai.com/v1',
+    
+    // Model-specific configurations for different tasks
+    MODELS: {
+      // Text-based conversations and general AI assistance
+      CHAT: {
+        model: 'gpt-4o', // Best for real-time conversation and complex reasoning
+        max_tokens: 2000,
+        temperature: 0.3,
+        description: 'Real-time conversation, complex reasoning, and general assistance'
+      },
+      
+      // Text analysis and summarization
+      ANALYSIS: {
+        model: 'gpt-4o-mini', // Good balance of quality and cost for analysis
+        max_tokens: 1500,
+        temperature: 0.2,
+        description: 'Text analysis, summarization, and content processing'
+      },
+      
+      // Quiz and flashcard generation
+      GENERATION: {
+        model: 'gpt-3.5-turbo-1106', // Excellent for structured JSON output
+        max_tokens: 1000,
+        temperature: 0.1,
+        description: 'Structured content generation (quizzes, flashcards, etc.)'
+      },
+      
+      // Image generation
+      IMAGE: {
+        model: 'dall-e-3', // High-quality image generation
+        size: '1024x1024',
+        quality: 'standard', // 'standard' or 'hd'
+        style: 'natural', // 'natural' or 'vivid'
+        description: 'Art & design generation from text descriptions'
+      },
+      
+      // Audio transcription
+      AUDIO: {
+        model: 'whisper-1', // Audio to text transcription
+        response_format: 'text',
+        language: 'en', // Default language
+        description: 'Transcription from speech and audio files'
+      }
+    },
+    
+    // Global settings
+    DEFAULT_MAX_TOKENS: 1000,
+    DEFAULT_TEMPERATURE: 0.3
   },
 
   // Database Configuration
   DATABASE: {
-    SUPABASE_URL: 'YOUR_SUPABASE_PROJECT_URL', // Get from Supabase dashboard
-    SUPABASE_ANON_KEY: 'YOUR_SUPABASE_ANON_KEY', // Get from Supabase dashboard
+    SUPABASE_URL: 'https://oyvmxabdpcnutnrzmpgc.supabase.co', // Get from Supabase dashboard
+    SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95dm14YWJkcGNudXRucnptcGdjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0NTU1NDEsImV4cCI6MjA3MjAzMTU0MX0.cCwzpiuuufGODI3RzWeTfWqBZ45IAV-qcVqFUfaHWt8',
     ENABLE_REALTIME: true,
     ENABLE_AUTH: true
   },
@@ -47,35 +92,72 @@ export const API_CONFIG = {
   // File Upload Configuration
   FILE_UPLOAD: {
     MAX_FILE_SIZE_MB: 10,
-    ALLOWED_TYPES: ['pdf', 'doc', 'docx', 'txt', 'jpg', 'png'],
+    ALLOWED_TYPES: ['pdf', 'doc', 'docx', 'txt', 'jpg', 'png', 'mp3', 'wav', 'm4a'],
     STORAGE_BUCKET: 'study-materials'
   },
 
-  // AI Generation Prompts
+  // AI Generation Prompts with model-specific configurations
   AI: {
-    SUMMARY_PROMPT: 'Please summarize the following text into 5-7 key bullet points. Focus on the main concepts and important details:',
-    QUIZ_PROMPT: `Create a 3-question multiple-choice quiz based on the following text. 
-    Return ONLY a valid JSON object with this exact structure:
-    {
-      "questions": [
-        {
-          "question": "Question text here?",
-          "options": ["Option A", "Option B", "Option C", "Option D"],
-          "answer": 0,
-          "explanation": "Brief explanation of why this is correct"
-        }
-      ]
-    }`,
-    FLASHCARD_PROMPT: `Create 5 flashcards from the following study material. 
-    Return ONLY a valid JSON object with this exact structure:
-    {
-      "flashcards": [
-        {
-          "front": "Question or term",
-          "back": "Answer or definition"
-        }
-      ]
-    }`
+    // Chat and conversation prompts
+    CHAT: {
+      system_prompt: 'You are StudyMate, an intelligent study assistant. Help students with their studies, answer questions, and provide guidance in a friendly and educational manner.',
+      max_tokens: 2000,
+      temperature: 0.3
+    },
+    
+    // Summary generation
+    SUMMARY: {
+      prompt: 'Please summarize the following text into 5-7 key bullet points. Focus on the main concepts and important details:',
+      max_tokens: 1500,
+      temperature: 0.2
+    },
+    
+    // Quiz generation
+    QUIZ: {
+      prompt: `Create a 3-question multiple-choice quiz based on the following text. 
+      Return ONLY a valid JSON object with this exact structure:
+      {
+        "questions": [
+          {
+            "question": "Question text here?",
+            "options": ["Option A", "Option B", "Option C", "Option D"],
+            "answer": 0,
+            "explanation": "Brief explanation of why this is correct"
+          }
+        ]
+      }`,
+      max_tokens: 1000,
+      temperature: 0.1
+    },
+    
+    // Flashcard generation
+    FLASHCARD: {
+      prompt: `Create 5 flashcards from the following study material. 
+      Return ONLY a valid JSON object with this exact structure:
+      {
+        "flashcards": [
+          {
+            "front": "Question or term",
+            "back": "Answer or definition"
+          }
+        ]
+      }`,
+      max_tokens: 800,
+      temperature: 0.1
+    },
+    
+    // Image generation
+    IMAGE: {
+      default_prompt: 'Create an educational illustration that helps explain the concept: ',
+      style_guide: 'Educational, clear, professional, suitable for students'
+    },
+    
+    // Audio transcription
+    AUDIO: {
+      supported_formats: ['mp3', 'wav', 'm4a', 'flac'],
+      max_file_size_mb: 25,
+      language_detection: true
+    }
   }
 };
 
@@ -93,6 +175,18 @@ export const getConfig = (path) => {
   }
   
   return value;
+};
+
+// Get model configuration for specific task
+export const getModelConfig = (task) => {
+  const models = getConfig('OPENAI.MODELS');
+  return models[task.toUpperCase()] || models.ANALYSIS; // Default to ANALYSIS if task not found
+};
+
+// Get AI prompt configuration for specific feature
+export const getAIPromptConfig = (feature) => {
+  const ai = getConfig('AI');
+  return ai[feature.toUpperCase()] || ai.SUMMARY; // Default to SUMMARY if feature not found
 };
 
 export const validateConfig = () => {

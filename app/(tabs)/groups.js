@@ -1,201 +1,298 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, FlatList, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Alert } from 'react-native';
+import { useTheme } from '@react-navigation/native';
+import { studyGroupService } from '../../lib/database';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function GroupsScreen() {
+  const navTheme = useTheme();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('myGroups');
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupSubject, setNewGroupSubject] = useState('');
+  const [newGroupDescription, setNewGroupDescription] = useState('');
+  const [loading, setLoading] = useState(true);
   const [myGroups, setMyGroups] = useState([
-    {
-      id: '1',
-      name: 'Biology Study Group',
-      subject: 'Biology',
-      members: 8,
-      lastActive: '2 hours ago',
-      unreadMessages: 3,
-      description: 'Study group for Biology 101 final exam preparation'
-    },
-    {
-      id: '2',
-      name: 'Math Warriors',
-      subject: 'Calculus',
-      members: 12,
-      lastActive: '1 day ago',
-      unreadMessages: 0,
-      description: 'Advanced calculus problem solving and study sessions'
-    }
+    { id: '1', name: 'Math Study Group', subject: 'Mathematics', description: 'Discuss math problems and concepts', members: 12, created_by: 'user1' },
+    { id: '2', name: 'AI Hackathon Team', subject: 'Artificial Intelligence', description: 'Team for AI competitions', members: 8, created_by: 'user2' }
   ]);
-
   const [availableGroups, setAvailableGroups] = useState([
-    {
-      id: '3',
-      name: 'History Buffs',
-      subject: 'World History',
-      members: 15,
-      lastActive: '30 minutes ago',
-      description: 'Exploring world history through interactive discussions'
-    },
-    {
-      id: '4',
-      name: 'Chemistry Lab',
-      subject: 'Chemistry',
-      members: 6,
-      lastActive: '3 hours ago',
-      description: 'Lab report collaboration and experiment sharing'
-    }
+    { id: '3', name: 'Science Enthusiasts', subject: 'Science', description: 'Explore science topics together', members: 15, created_by: 'user3' },
+    { id: '4', name: 'React Native Learners', subject: 'Programming', description: 'Learn React Native as a group', members: 10, created_by: 'user4' },
+    { id: '5', name: 'Hackathon Builders', subject: 'General', description: 'Build projects for hackathons', members: 20, created_by: 'user5' }
   ]);
 
-  const createGroup = () => {
+  // Load groups on component mount
+  useEffect(() => {
+    if (user) {
+      loadGroups();
+    }
+  }, [user]);
+
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300); // 300ms delay
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchQuery]);
+
+  // Load user's groups and available public groups
+  const loadGroups = async () => {
+    try {
+      setLoading(true);
+      
+      // Load user's groups
+      const { data: userGroups, error: userGroupsError } = await studyGroupService.getUserGroups(user.id);
+      if (userGroupsError) {
+        console.error('Error loading user groups:', userGroupsError);
+      } else {
+        setMyGroups(userGroups || []);
+      }
+      
+      // Load public groups
+      const { data: publicGroups, error: publicGroupsError } = await studyGroupService.getPublicGroups();
+      if (publicGroupsError) {
+        console.error('Error loading public groups:', publicGroupsError);
+      } else {
+        // Filter out groups the user is already a member of
+        const userGroupIds = (userGroups || []).map(g => g.id);
+        const filteredPublicGroups = (publicGroups || []).filter(g => !userGroupIds.includes(g.id));
+        setAvailableGroups(filteredPublicGroups);
+      }
+    } catch (error) {
+      console.error('Error loading groups:', error);
+      Alert.alert('❌ Error', 'Failed to load study groups');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Create new study group
+  const createGroup = async () => {
     if (!newGroupName.trim() || !newGroupSubject.trim()) {
-      Alert.alert('Error', 'Please fill in both group name and subject');
+      Alert.alert('❌ Error', 'Please fill in both group name and subject');
       return;
     }
     
-    const newGroup = {
-      id: Date.now().toString(),
+    try {
+      const { data, error } = await studyGroupService.createGroup(user.id, {
       name: newGroupName.trim(),
       subject: newGroupSubject.trim(),
-      members: 1,
-      lastActive: 'Just now',
-      unreadMessages: 0,
-      description: `Study group for ${newGroupSubject.trim()}`
-    };
-    
-    setMyGroups(prev => [newGroup, ...prev]);
-    Alert.alert('Success', 'Group created successfully!');
+        description: newGroupDescription.trim() || `Study group for ${newGroupSubject.trim()}`,
+        isPublic: true,
+        tags: [newGroupSubject.trim()]
+      });
+      
+      if (error) {
+        Alert.alert('❌ Error', 'Failed to create group');
+        return;
+      }
+      
+      // Refresh groups
+      await loadGroups();
+      
+      Alert.alert('✅ Success', 'Group created successfully!');
     setShowCreateGroup(false);
     setNewGroupName('');
     setNewGroupSubject('');
+      setNewGroupDescription('');
+    } catch (error) {
+      console.error('Error creating group:', error);
+      Alert.alert('❌ Error', 'Failed to create group');
+    }
   };
 
-  const joinGroup = (group) => {
-    // Remove from available groups and add to my groups
-    setAvailableGroups(prev => prev.filter(g => g.id !== group.id));
-    
-    const joinedGroup = {
-      ...group,
-      members: group.members + 1,
-      lastActive: 'Just now',
-      unreadMessages: 0
-    };
-    
-    setMyGroups(prev => [joinedGroup, ...prev]);
-    Alert.alert('Success', `You've joined ${group.name}!`);
+  // Join a public group
+  const joinGroup = async (group) => {
+    try {
+      const { error } = await studyGroupService.addMember(group.id, user.id, 'member');
+      
+      if (error) {
+        Alert.alert('❌ Error', 'Failed to join group');
+        return;
+      }
+      
+      // Refresh groups
+      await loadGroups();
+      
+      Alert.alert('✅ Success', `You've joined ${group.name}!`);
+    } catch (error) {
+      console.error('Error joining group:', error);
+      Alert.alert('❌ Error', 'Failed to join group');
+    }
   };
 
-  const leaveGroup = (group) => {
+  // Leave a group
+  const leaveGroup = async (group) => {
     Alert.alert(
-      'Leave Group',
+      '🚪 Leave Group',
       `Are you sure you want to leave "${group.name}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Leave',
           style: 'destructive',
-          onPress: () => {
-            setMyGroups(prev => prev.filter(g => g.id !== group.id));
-            
-            const leftGroup = {
-              ...group,
-              members: Math.max(0, group.members - 1),
-              lastActive: 'Just now'
-            };
-            
-            setAvailableGroups(prev => [leftGroup, ...prev]);
-            Alert.alert('Success', `You've left ${group.name}`);
+          onPress: async () => {
+            try {
+              const { error } = await studyGroupService.removeMember(group.id, user.id);
+              
+              if (error) {
+                Alert.alert('❌ Error', 'Failed to leave group');
+                return;
+              }
+              
+              // Refresh groups
+              await loadGroups();
+              
+              Alert.alert('✅ Success', `You've left ${group.name}`);
+            } catch (error) {
+              console.error('Error leaving group:', error);
+              Alert.alert('❌ Error', 'Failed to leave group');
+            }
           }
         }
       ]
     );
   };
 
-  const openGroupChat = (group) => {
-    Alert.alert('Group Chat', `Opening chat for ${group.name}. Chat functionality will be implemented.`);
+  // Delete a group (only for group creators)
+  const deleteGroup = async (group) => {
+    Alert.alert(
+      '🗑️ Delete Group',
+      `Are you sure you want to delete "${group.name}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Note: This would require adding a deleteGroup method to studyGroupService
+              // For now, we'll just remove the user from the group
+              const { error } = await studyGroupService.removeMember(group.id, user.id);
+              
+              if (error) {
+                Alert.alert('❌ Error', 'Failed to delete group');
+                return;
+              }
+              
+              // Refresh groups
+              await loadGroups();
+              
+              Alert.alert('✅ Success', `Group "${group.name}" has been removed`);
+            } catch (error) {
+              console.error('Error deleting group:', error);
+              Alert.alert('❌ Error', 'Failed to delete group');
+            }
+          }
+        }
+      ]
+    );
   };
 
-  const searchGroups = (query) => {
-    setSearchQuery(query);
-    // In a real app, this would filter groups based on search query
-  };
-
-  const renderGroupItem = ({ item, isMyGroup = false }) => (
-    <TouchableOpacity style={styles.groupCard}>
-      <View style={styles.groupHeader}>
-        <View style={styles.groupInfo}>
-          <Text style={styles.groupName}>{item.name}</Text>
-          <Text style={styles.groupSubject}>{item.subject}</Text>
-        </View>
-        <View style={styles.groupStats}>
-          <Text style={styles.memberCount}>{item.members} members</Text>
-          <Text style={styles.lastActive}>{item.lastActive}</Text>
-        </View>
-      </View>
-      
-      <Text style={styles.groupDescription}>{item.description}</Text>
-      
-      {isMyGroup && item.unreadMessages > 0 && (
-        <View style={styles.unreadBadge}>
-          <Text style={styles.unreadText}>{item.unreadMessages} new</Text>
-        </View>
-      )}
-      
-      <View style={styles.groupActions}>
-        {isMyGroup ? (
-          <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.actionButton} onPress={() => openGroupChat(item)}>
-              <Text style={styles.actionText}>Open Chat</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.leaveButton} onPress={() => leaveGroup(item)}>
-              <Text style={styles.leaveText}>Leave</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <TouchableOpacity 
-            style={styles.joinButton} 
-            onPress={() => joinGroup(item)}
-          >
-            <Text style={styles.joinText}>Join Group</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
-
+  // Search groups
   const filteredMyGroups = myGroups.filter(group => 
-    group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    group.subject.toLowerCase().includes(searchQuery.toLowerCase())
+    group.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+    group.subject.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
   );
 
   const filteredAvailableGroups = availableGroups.filter(group => 
-    group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    group.subject.toLowerCase().includes(searchQuery.toLowerCase())
+    group.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+    group.subject.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
   );
 
+  // Render group item
+  const renderGroupItem = ({ item, isMyGroup = false }) => (
+    <View style={[styles.groupCard, { backgroundColor: navTheme.colors.card }]}>
+      <View style={styles.groupHeader}>
+        <Text style={[styles.groupName, { color: navTheme.colors.text }]}>
+          {item.name}
+        </Text>
+        <Text style={[styles.groupSubject, { color: navTheme.colors.text }]}>
+          {item.subject}
+        </Text>
+      </View>
+      
+      {item.description && (
+        <Text style={[styles.groupDescription, { color: navTheme.colors.text }]}>
+          {item.description}
+        </Text>
+      )}
+      
+      <View style={styles.groupFooter}>
+        <Text style={[styles.memberCount, { color: navTheme.colors.text }]}>
+          👥 {item.members || 0} members
+        </Text>
+        
+        {isMyGroup ? (
+          <View style={styles.myGroupActions}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.leaveButton]}
+              onPress={() => leaveGroup(item)}
+            >
+              <Text style={styles.buttonText}>Leave</Text>
+            </TouchableOpacity>
+            
+            {item.created_by === user?.id && (
+              <TouchableOpacity
+                style={[styles.actionButton, styles.deleteButton]}
+                onPress={() => deleteGroup(item)}
+              >
+                <Text style={styles.buttonText}>Delete</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.joinButton]}
+            onPress={() => joinGroup(item)}
+          >
+            <Text style={styles.buttonText}>Join</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { backgroundColor: navTheme.colors.background }]}>
+        <Text style={[styles.loadingText, { color: navTheme.colors.text }]}>
+          Loading study groups...
+        </Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: navTheme.colors.background }]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Study Groups</Text>
-        <Text style={styles.headerSubtitle}>Collaborate and learn together</Text>
+        <Text style={[styles.headerTitle, { color: navTheme.colors.text }]}>Study Groups</Text>
       </View>
 
       <View style={styles.searchSection}>
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { backgroundColor: navTheme.colors.card, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
           placeholder="Search groups..."
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={navTheme.colors.text}
           value={searchQuery}
-          onChangeText={searchGroups}
+          onChangeText={setSearchQuery}
         />
       </View>
 
-      <View style={styles.tabSection}>
+      <View style={[styles.tabSection, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
         <TouchableOpacity 
           style={[styles.tab, activeTab === 'myGroups' && styles.activeTab]} 
           onPress={() => setActiveTab('myGroups')}
         >
-          <Text style={[styles.tabText, activeTab === 'myGroups' && styles.activeTabText]}>
+          <Text style={[styles.tabText, activeTab === 'myGroups' && styles.activeTabText, { color: activeTab === 'myGroups' ? '#fff' : navTheme.colors.text }]}>
             My Groups ({filteredMyGroups.length})
           </Text>
         </TouchableOpacity>
@@ -203,7 +300,7 @@ export default function GroupsScreen() {
           style={[styles.tab, activeTab === 'available' && styles.activeTab]} 
           onPress={() => setActiveTab('available')}
         >
-          <Text style={[styles.tabText, activeTab === 'available' && styles.activeTabText]}>
+          <Text style={[styles.tabText, activeTab === 'available' && styles.activeTabText, { color: activeTab === 'available' ? '#fff' : navTheme.colors.text }]}>
             Available Groups ({filteredAvailableGroups.length})
           </Text>
         </TouchableOpacity>
@@ -212,7 +309,7 @@ export default function GroupsScreen() {
       {activeTab === 'myGroups' && (
         <View style={styles.contentSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>My Study Groups</Text>
+            <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>My Study Groups</Text>
             <TouchableOpacity 
               style={styles.createButton}
               onPress={() => setShowCreateGroup(true)}
@@ -222,15 +319,15 @@ export default function GroupsScreen() {
           </View>
           
           {filteredMyGroups.length === 0 ? (
-            <View style={styles.emptyState}>
+            <View style={[styles.emptyState, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
               <Text style={styles.emptyIcon}>👥</Text>
-              <Text style={styles.emptyTitle}>No groups yet</Text>
-              <Text style={styles.emptyText}>Create your first study group or join an existing one!</Text>
+              <Text style={[styles.emptyTitle, { color: navTheme.colors.text }]}>No groups yet</Text>
+              <Text style={[styles.emptyText, { color: navTheme.colors.text }]}>Create your first study group or join an existing one!</Text>
             </View>
           ) : (
             <FlatList
               data={filteredMyGroups}
-              renderItem={(item) => renderGroupItem(item, true)}
+              renderItem={(item) => renderGroupItem({ ...item, isMyGroup: true })}
               keyExtractor={(item) => item.id}
               showsVerticalScrollIndicator={false}
               style={styles.groupsList}
@@ -241,17 +338,17 @@ export default function GroupsScreen() {
 
       {activeTab === 'available' && (
         <View style={styles.contentSection}>
-          <Text style={styles.sectionTitle}>Available Groups</Text>
+          <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>Available Groups</Text>
           {filteredAvailableGroups.length === 0 ? (
-            <View style={styles.emptyState}>
+            <View style={[styles.emptyState, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
               <Text style={styles.emptyIcon}>🔍</Text>
-              <Text style={styles.emptyTitle}>No groups found</Text>
-              <Text style={styles.emptyText}>Try adjusting your search or create a new group!</Text>
+              <Text style={[styles.emptyTitle, { color: navTheme.colors.text }]}>No groups found</Text>
+              <Text style={[styles.emptyText, { color: navTheme.colors.text }]}>Try adjusting your search or create a new group!</Text>
             </View>
           ) : (
             <FlatList
               data={filteredAvailableGroups}
-              renderItem={renderGroupItem}
+              renderItem={(item) => renderGroupItem({ ...item, isMyGroup: false })}
               keyExtractor={(item) => item.id}
               showsVerticalScrollIndicator={false}
               style={styles.groupsList}
@@ -262,31 +359,39 @@ export default function GroupsScreen() {
 
       {showCreateGroup && (
         <View style={styles.modalOverlay}>
-          <View style={styles.createGroupModal}>
-            <Text style={styles.modalTitle}>Create New Study Group</Text>
+          <View style={[styles.createGroupModal, { backgroundColor: navTheme.colors.card }] }>
+            <Text style={[styles.modalTitle, { color: navTheme.colors.text }]}>Create New Study Group</Text>
             
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
               placeholder="Group Name"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={navTheme.colors.text}
               value={newGroupName}
               onChangeText={setNewGroupName}
             />
             
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
               placeholder="Subject"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={navTheme.colors.text}
               value={newGroupSubject}
               onChangeText={setNewGroupSubject}
+            />
+
+            <TextInput
+              style={[styles.modalInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+              placeholder="Description (optional)"
+              placeholderTextColor={navTheme.colors.text}
+              value={newGroupDescription}
+              onChangeText={setNewGroupDescription}
             />
             
             <View style={styles.modalActions}>
               <TouchableOpacity 
-                style={styles.cancelButton}
+                style={[styles.cancelButton, { backgroundColor: navTheme.colors.border }]}
                 onPress={() => setShowCreateGroup(false)}
               >
-                <Text style={styles.cancelText}>Cancel</Text>
+                <Text style={[styles.cancelText, { color: navTheme.colors.text }]}>Cancel</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
@@ -299,28 +404,6 @@ export default function GroupsScreen() {
           </View>
         </View>
       )}
-
-      <View style={styles.featuresSection}>
-        <Text style={styles.featuresTitle}>🚀 Group Features</Text>
-        <View style={styles.featureGrid}>
-          <View style={styles.featureItem}>
-            <Text style={styles.featureIcon}>💬</Text>
-            <Text style={styles.featureText}>Group Chat</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <Text style={styles.featureIcon}>📁</Text>
-            <Text style={styles.featureText}>File Sharing</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <Text style={styles.featureIcon}>📅</Text>
-            <Text style={styles.featureText}>Study Sessions</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <Text style={styles.featureIcon}>📊</Text>
-            <Text style={styles.featureText}>Progress Tracking</Text>
-          </View>
-        </View>
-      </View>
     </View>
   );
 }
@@ -328,7 +411,6 @@ export default function GroupsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
     padding: 20,
   },
   header: {
@@ -339,33 +421,22 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1F2937',
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    marginTop: 8,
-    textAlign: 'center',
   },
   searchSection: {
     marginBottom: 20,
   },
   searchInput: {
-    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
   },
   tabSection: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 4,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   tab: {
     flex: 1,
@@ -379,7 +450,6 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6B7280',
   },
   activeTabText: {
     color: '#fff',
@@ -396,7 +466,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#374151',
   },
   createButton: {
     backgroundColor: '#A78BFA',
@@ -413,11 +482,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   groupCard: {
-    backgroundColor: '#fff',
     padding: 20,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     marginBottom: 16,
   },
   groupHeader: {
@@ -426,37 +493,51 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 12,
   },
-  groupInfo: {
-    flex: 1,
-  },
   groupName: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1F2937',
     marginBottom: 4,
   },
   groupSubject: {
     fontSize: 14,
-    color: '#6B7280',
   },
-  groupStats: {
-    alignItems: 'flex-end',
+  groupDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  groupFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
   },
   memberCount: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#374151',
-    marginBottom: 4,
   },
-  lastActive: {
-    fontSize: 12,
-    color: '#9CA3AF',
+  myGroupActions: {
+    flexDirection: 'row',
+    gap: 12,
   },
-  groupDescription: {
+  actionButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  buttonText: {
     fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
-    marginBottom: 16,
+    fontWeight: '500',
+    color: '#fff',
+  },
+  leaveButton: {
+    backgroundColor: '#EF4444',
+  },
+  joinButton: {
+    backgroundColor: '#10B981',
+  },
+  deleteButton: {
+    backgroundColor: '#DC2626',
   },
   unreadBadge: {
     backgroundColor: '#EF4444',
@@ -471,46 +552,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
-  groupActions: {
-    alignItems: 'flex-end',
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  actionButton: {
-    backgroundColor: '#F3F4F6',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  actionText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-  },
-  leaveButton: {
-    backgroundColor: '#EF4444',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  leaveText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#fff',
-  },
-  joinButton: {
-    backgroundColor: '#10B981',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  joinText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#fff',
-  },
   modalOverlay: {
     position: 'absolute',
     top: 0,
@@ -523,7 +564,6 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   createGroupModal: {
-    backgroundColor: '#fff',
     padding: 24,
     borderRadius: 16,
     width: '90%',
@@ -532,14 +572,11 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#1F2937',
     marginBottom: 20,
     textAlign: 'center',
   },
   modalInput: {
-    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
@@ -551,7 +588,6 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -559,7 +595,6 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#374151',
   },
   confirmButton: {
     flex: 1,
@@ -573,81 +608,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#fff',
   },
-  featuresSection: {
-    marginTop: 24,
-    marginBottom: 40,
-  },
-  featuresTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 16,
-  },
-  featureGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  featureItem: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    alignItems: 'center',
-    width: '48%',
-  },
-  featureIcon: {
-    fontSize: 24,
-    marginBottom: 8,
-  },
-  featureText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-    textAlign: 'center',
-  },
-  messageItem: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  messageHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  messageAvatar: {
-    fontSize: 20,
-    marginRight: 12,
-  },
-  messageInfo: {
-    flex: 1,
-  },
-  messageUser: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  messageTime: {
-    fontSize: 12,
-    color: '#9CA3AF',
-  },
-  messageText: {
-    fontSize: 14,
-    color: '#1F2937',
-    lineHeight: 20,
-  },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 40,
-    backgroundColor: '#fff',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
   emptyIcon: {
     fontSize: 48,
@@ -656,13 +621,17 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#374151',
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
-    color: '#6B7280',
     textAlign: 'center',
     paddingHorizontal: 20,
+  },
+  loadingText: {
+    fontSize: 18,
+    fontWeight: '500',
+    textAlign: 'center',
+    paddingVertical: 20,
   },
 });

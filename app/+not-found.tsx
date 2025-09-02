@@ -1,14 +1,17 @@
+// @ts-nocheck
 import { Link, Stack } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
+import { useTheme } from '@react-navigation/native';
 
 export default function NotFoundScreen() {
+  const navTheme = useTheme();
   return (
     <>
       <Stack.Screen options={{ title: 'Oops!' }} />
-      <View style={styles.container}>
-        <Text style={styles.title}>This screen does not exist.</Text>
+      <View style={[styles.container, { backgroundColor: navTheme.colors.background }]}>
+        <Text style={[styles.title, { color: navTheme.colors.text }]}>This screen does not exist.</Text>
         <Link href="/" style={styles.link}>
-          <Text style={styles.linkText}>Go to home screen!</Text>
+          <Text style={[styles.linkText, { color: '#6366F1' }]}>Go to home screen!</Text>
         </Link>
       </View>
     </>
