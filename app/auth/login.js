@@ -12,12 +12,21 @@ import {
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '@react-navigation/native';
+import { useEffect } from 'react';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, resetPassword, resendVerificationEmail, user } = useAuth();
+  const navTheme = useTheme();
+
+  useEffect(() => {
+    if (user) {
+      router.replace('/(tabs)');
+    }
+  }, [user]);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -29,9 +38,31 @@ export default function LoginScreen() {
     
     try {
       const { error } = await signIn(email.trim(), password);
-      
+
       if (error) {
-        Alert.alert('Login Failed', error);
+        const normalized = (error || '').toLowerCase();
+        if (normalized.includes('email not confirmed') || normalized.includes('confirm')) {
+          Alert.alert(
+            'Verify your email',
+            'We sent you a verification link. Please verify your email before signing in.',
+            [
+              { text: 'OK' },
+              {
+                text: 'Resend link',
+                onPress: async () => {
+                  const { error: resendError } = await resendVerificationEmail(email.trim());
+                  if (resendError) {
+                    Alert.alert('Could not resend', resendError);
+                  } else {
+                    Alert.alert('Sent', 'Verification link resent. Check your inbox.');
+                  }
+                }
+              }
+            ]
+          );
+        } else {
+          Alert.alert('Login Failed', error);
+        }
       } else {
         // Successfully logged in, navigate to main app
         router.replace('/(tabs)');
@@ -43,22 +74,43 @@ export default function LoginScreen() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    const emailToUse = email.trim();
+    if (!emailToUse) {
+      Alert.alert('Forgot Password', 'Enter your email above first.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await resetPassword(emailToUse);
+      if (error) {
+        Alert.alert('Reset Failed', error);
+      } else {
+        Alert.alert('Check your inbox', 'We sent a password reset link to your email.');
+      }
+    } catch (_e) {
+      Alert.alert('Error', 'Unable to send reset email right now.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <KeyboardAvoidingView 
-      style={styles.container} 
+      style={[styles.container, { backgroundColor: navTheme.colors.background }]} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
-          <Text style={styles.title}>🎓 StudyMate</Text>
-          <Text style={styles.subtitle}>Welcome back! Sign in to continue</Text>
+          <Text style={[styles.title, { color: navTheme.colors.text }]}>🎓 StudyMate</Text>
+          <Text style={[styles.subtitle, { color: navTheme.colors.text }]}>Welcome back! Sign in to continue</Text>
         </View>
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
+            <Text style={[styles.label, { color: navTheme.colors.text }]}>Email</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: navTheme.colors.card, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
               placeholder="Enter your email"
               value={email}
               onChangeText={setEmail}
@@ -69,9 +121,9 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
+            <Text style={[styles.label, { color: navTheme.colors.text }]}>Password</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: navTheme.colors.card, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
               placeholder="Enter your password"
               value={password}
               onChangeText={setPassword}
@@ -90,16 +142,16 @@ export default function LoginScreen() {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.forgotPassword}>
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+          <TouchableOpacity style={styles.forgotPassword} onPress={handleForgotPassword} disabled={loading}>
+            <Text style={[styles.forgotPasswordText, { color: '#6366f1' }]}>Forgot Password?</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Don't have an account? </Text>
+          <Text style={[styles.footerText, { color: navTheme.colors.text }]}>Don't have an account? </Text>
           <Link href="/auth/signup" asChild>
             <TouchableOpacity>
-              <Text style={styles.linkText}>Sign Up</Text>
+              <Text style={[styles.linkText, { color: '#6366f1' }]}>Sign Up</Text>
             </TouchableOpacity>
           </Link>
         </View>

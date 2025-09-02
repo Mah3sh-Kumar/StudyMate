@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '@react-navigation/native';
 
 export default function SignUpScreen() {
   const [fullName, setFullName] = useState('');
@@ -21,6 +22,7 @@ export default function SignUpScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
+  const navTheme = useTheme();
 
   const handleSignUp = async () => {
     // Validation
@@ -70,20 +72,20 @@ export default function SignUpScreen() {
 
   return (
     <KeyboardAvoidingView 
-      style={styles.container} 
+      style={[styles.container, { backgroundColor: navTheme.colors.background }]} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
-          <Text style={styles.title}>🎓 StudyMate</Text>
-          <Text style={styles.subtitle}>Create your account to get started</Text>
+          <Text style={[styles.title, { color: navTheme.colors.text }]}>🎓 StudyMate</Text>
+          <Text style={[styles.subtitle, { color: navTheme.colors.text }]}>Create your account to get started</Text>
         </View>
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Full Name</Text>
+            <Text style={[styles.label, { color: navTheme.colors.text }]}>Full Name</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: navTheme.colors.card, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
               placeholder="Enter your full name"
               value={fullName}
               onChangeText={setFullName}
@@ -93,9 +95,9 @@ export default function SignUpScreen() {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Username</Text>
+            <Text style={[styles.label, { color: navTheme.colors.text }]}>Username</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: navTheme.colors.card, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
               placeholder="Choose a username"
               value={username}
               onChangeText={setUsername}
@@ -105,9 +107,9 @@ export default function SignUpScreen() {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
+            <Text style={[styles.label, { color: navTheme.colors.text }]}>Email</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: navTheme.colors.card, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
               placeholder="Enter your email"
               value={email}
               onChangeText={setEmail}
@@ -118,9 +120,9 @@ export default function SignUpScreen() {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
+            <Text style={[styles.label, { color: navTheme.colors.text }]}>Password</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: navTheme.colors.card, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
               placeholder="Create a password"
               value={password}
               onChangeText={setPassword}
@@ -130,9 +132,9 @@ export default function SignUpScreen() {
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={styles.label}>Confirm Password</Text>
+            <Text style={[styles.label, { color: navTheme.colors.text }]}>Confirm Password</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: navTheme.colors.card, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
               placeholder="Confirm your password"
               value={confirmPassword}
               onChangeText={setConfirmPassword}

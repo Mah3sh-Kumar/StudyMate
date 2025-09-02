@@ -1,10 +1,12 @@
 import React, { useEffect } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { useTheme } from '@react-navigation/native';
 import { router } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function AuthGuard({ children }) {
   const { user, loading } = useAuth();
+  const navTheme = useTheme();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -15,9 +17,9 @@ export default function AuthGuard({ children }) {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={[styles.loadingContainer, { backgroundColor: navTheme.colors.background }]}>
         <ActivityIndicator size="large" color="#6366F1" />
-        <Text style={styles.loadingText}>Loading...</Text>
+        <Text style={[styles.loadingText, { color: navTheme.colors.text }]}>Loading...</Text>
       </View>
     );
   }
