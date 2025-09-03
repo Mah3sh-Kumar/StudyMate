@@ -21,10 +21,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SettingsScreen() {
   const { user, signOut, updateProfile } = useAuth();
-  const { theme, toggleTheme } = useThemePreference();
+  const { theme, toggleTheme, setTheme } = useThemePreference();
   const navTheme = useTheme();
 
-  const [darkMode, setDarkMode] = useState(theme === 'dark');
   const [notifications, setNotifications] = useState(true);
   const [aiFeatures, setAiFeatures] = useState(true);
   const [fullName, setFullName] = useState('');
@@ -40,7 +39,7 @@ export default function SettingsScreen() {
   }, [user]);
 
   useEffect(() => {
-    setDarkMode(theme === 'dark');
+    // No need for darkMode state, theme is managed by context
   }, [theme]);
 
   // Load profile
@@ -183,81 +182,43 @@ export default function SettingsScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Header */}
-      <View
-        style={[
-          styles.header,
-          { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border },
-        ]}
-      >
+      <View style={[styles.header, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}> 
         <View style={styles.headerContent}>
           <Text style={[styles.title, { color: navTheme.colors.text }]}>⚙️ Settings</Text>
-          <Text style={[styles.subtitle, { color: navTheme.colors.text }]}>
-            Manage your account and preferences
-          </Text>
+          <Text style={[styles.subtitle, { color: navTheme.colors.text }]}>Manage your account and preferences</Text>
         </View>
-        <View
-          style={[styles.headerDecoration, { backgroundColor: navTheme.colors.primary || '#6366f1' }]}
-        />
+        <View style={[styles.headerDecoration, { backgroundColor: navTheme.colors.primary || '#6366f1' }]} />
       </View>
 
       {/* Profile Section */}
-      <View
-        style={[
-          styles.section,
-          { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border },
-        ]}
-      >
+      <View style={[styles.section, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}> 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>👤 Profile</Text>
-          <Text style={[styles.sectionSubtitle, { color: navTheme.colors.text }]}>
-            Manage your personal information
-          </Text>
+          <Text style={[styles.sectionSubtitle, { color: navTheme.colors.text }]}>Manage your personal information</Text>
         </View>
-
         <View style={styles.profileInfo}>
-          <View style={[styles.avatar, { backgroundColor: navTheme.colors.primary || '#6366f1' }]}>
+          <View style={[styles.avatar, { backgroundColor: navTheme.colors.primary || '#6366f1' }]}> 
             <Text style={styles.avatarText}>{fullName.charAt(0) || user?.email?.charAt(0) || 'U'}</Text>
           </View>
-
           <View style={styles.profileDetails}>
-            <Text style={[styles.profileName, { color: navTheme.colors.text }]}>
-              {fullName || 'User'}
-            </Text>
-            <Text style={[styles.profileEmail, { color: navTheme.colors.text }]}>
-              {user?.email}
-            </Text>
+            <Text style={[styles.profileName, { color: navTheme.colors.text }]}>{fullName || 'User'}</Text>
+            <Text style={[styles.profileEmail, { color: navTheme.colors.text }]}>{user?.email}</Text>
           </View>
         </View>
-
         <View style={styles.inputGroup}>
           <Text style={[styles.inputLabel, { color: navTheme.colors.text }]}>Full Name</Text>
           <TextInput
-            style={[
-              styles.input,
-              {
-                backgroundColor: navTheme.colors.background,
-                color: navTheme.colors.text,
-                borderColor: navTheme.colors.border,
-              },
-            ]}
+            style={[styles.input, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
             value={fullName}
             onChangeText={setFullName}
             placeholder="Your full name"
             placeholderTextColor={navTheme.colors.text}
           />
         </View>
-
         <View style={styles.inputGroup}>
           <Text style={[styles.inputLabel, { color: navTheme.colors.text }]}>Username</Text>
           <TextInput
-            style={[
-              styles.input,
-              {
-                backgroundColor: navTheme.colors.background,
-                color: navTheme.colors.text,
-                borderColor: navTheme.colors.border,
-              },
-            ]}
+            style={[styles.input, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
             value={username}
             onChangeText={setUsername}
             placeholder="Choose a username"
@@ -265,12 +226,7 @@ export default function SettingsScreen() {
             autoCapitalize="none"
           />
         </View>
-
-        <TouchableOpacity
-          style={[styles.saveButton, { backgroundColor: navTheme.colors.primary || '#6366f1' }]}
-          onPress={handleSaveProfile}
-          disabled={loading}
-        >
+        <TouchableOpacity style={[styles.saveButton, { backgroundColor: navTheme.colors.primary || '#6366f1' }]} onPress={handleSaveProfile} disabled={loading}>
           {loading ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
@@ -283,115 +239,80 @@ export default function SettingsScreen() {
       </View>
 
       {/* Preferences Section */}
-      <View
-        style={[
-          styles.section,
-          { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border },
-        ]}
-      >
+      <View style={[styles.section, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}> 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>🎨 Preferences</Text>
-          <Text style={[styles.sectionSubtitle, { color: navTheme.colors.text }]}>
-            Customize your app experience
-          </Text>
+          <Text style={[styles.sectionSubtitle, { color: navTheme.colors.text }]}>Customize your app experience</Text>
         </View>
-
-        {/* Dark Mode */}
-        <View style={styles.settingItem}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingIcon}>🌙</Text>
-            <View style={styles.settingDetails}>
-              <Text style={[styles.settingLabel, { color: navTheme.colors.text }]}>Dark Mode</Text>
-              <Text style={[styles.settingDescription, { color: navTheme.colors.text }]}>
-                Switch between light and dark themes
-              </Text>
-            </View>
-          </View>
-          <Switch
-            value={darkMode}
-            onValueChange={() => {
-              setDarkMode(!darkMode);
-              toggleTheme();
-            }}
-            trackColor={{ false: '#d1d5db', true: navTheme.colors.primary || '#6366f1' }}
-            thumbColor={'#ffffff'}
-          />
+        {/* Theme Buttons */}
+        <View style={styles.themeButtonRow}>
+          <TouchableOpacity
+            style={[styles.themeButton, theme === 'light' && styles.themeButtonActive, { borderColor: navTheme.colors.border, backgroundColor: theme === 'light' ? navTheme.colors.primary : navTheme.colors.card }]}
+            onPress={() => setTheme('light')}
+          >
+            <Text style={styles.themeButtonText} numberOfLines={1}>Light</Text>
+          </TouchableOpacity>
+          <View style={styles.themeButtonSpacer} />
+          <TouchableOpacity
+            style={[styles.themeButton, theme === 'dark' && styles.themeButtonActive, { borderColor: navTheme.colors.border, backgroundColor: theme === 'dark' ? navTheme.colors.primary : navTheme.colors.card }]}
+            onPress={() => setTheme('dark')}
+          >
+            <Text style={styles.themeButtonText} numberOfLines={1}>Dark</Text>
+          </TouchableOpacity>
+          <View style={styles.themeButtonSpacer} />
+          <TouchableOpacity
+            style={[styles.themeButton, theme === 'amoled' && styles.themeButtonActive, { borderColor: navTheme.colors.border, backgroundColor: theme === 'amoled' ? navTheme.colors.primary : navTheme.colors.card }]}
+            onPress={() => setTheme('amoled')}
+          >
+            <Text style={styles.themeButtonText} numberOfLines={1}>AMOLED</Text>
+          </TouchableOpacity>
         </View>
-
         {/* Notifications */}
         <View style={styles.settingItem}>
           <View style={styles.settingInfo}>
             <Text style={styles.settingIcon}>🔔</Text>
             <View style={styles.settingDetails}>
               <Text style={[styles.settingLabel, { color: navTheme.colors.text }]}>Notifications</Text>
-              <Text style={[styles.settingDescription, { color: navTheme.colors.text }]}>
-                Receive study reminders and updates
-              </Text>
+              <Text style={[styles.settingDescription, { color: navTheme.colors.text }]}>Receive study reminders and updates</Text>
             </View>
           </View>
-          <Switch
-            value={notifications}
-            onValueChange={(val) => savePreferences({ notifications: val })}
-            trackColor={{ false: '#d1d5db', true: navTheme.colors.primary || '#6366f1' }}
-            thumbColor={'#ffffff'}
-          />
+          <Switch value={notifications} onValueChange={(val) => savePreferences({ notifications: val })} trackColor={{ false: '#d1d5db', true: navTheme.colors.primary || '#6366f1' }} thumbColor={'#ffffff'} />
         </View>
-
         {/* AI Features */}
         <View style={styles.settingItem}>
           <View style={styles.settingInfo}>
             <Text style={styles.settingIcon}>🤖</Text>
             <View style={styles.settingDetails}>
               <Text style={[styles.settingLabel, { color: navTheme.colors.text }]}>AI Features</Text>
-              <Text style={[styles.settingDescription, { color: navTheme.colors.text }]}>
-                Enable AI-powered study assistance
-              </Text>
+              <Text style={[styles.settingDescription, { color: navTheme.colors.text }]}>Enable AI-powered study assistance</Text>
             </View>
           </View>
-          <Switch
-            value={aiFeatures}
-            onValueChange={(val) => savePreferences({ aiFeatures: val })}
-            trackColor={{ false: '#d1d5db', true: navTheme.colors.primary || '#6366f1' }}
-            thumbColor={'#ffffff'}
-          />
+          <Switch value={aiFeatures} onValueChange={(val) => savePreferences({ aiFeatures: val })} trackColor={{ false: '#d1d5db', true: navTheme.colors.primary || '#6366f1' }} thumbColor={'#ffffff'} />
         </View>
       </View>
 
       {/* Account Actions */}
-      <View
-        style={[
-          styles.section,
-          { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border },
-        ]}
-      >
+      <View style={[styles.section, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}> 
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>⚠️ Account Actions</Text>
-          <Text style={[styles.sectionSubtitle, { color: navTheme.colors.text }]}>
-            Manage your account
-          </Text>
+          <Text style={[styles.sectionSubtitle, { color: navTheme.colors.text }]}>Manage your account</Text>
         </View>
-
         <TouchableOpacity style={[styles.settingItem, styles.dangerItem]} onPress={handleDeleteAccount}>
           <View style={styles.settingInfo}>
             <Text style={styles.settingIcon}>🗑️</Text>
             <View style={styles.settingDetails}>
               <Text style={[styles.settingLabel, styles.dangerText]}>Delete Account</Text>
-              <Text style={[styles.settingDescription, styles.dangerText]}>
-                Permanently remove your account
-              </Text>
+              <Text style={[styles.settingDescription, styles.dangerText]}>Permanently remove your account</Text>
             </View>
           </View>
           <Text style={styles.settingArrow}>▶</Text>
         </TouchableOpacity>
-
         <TouchableOpacity style={[styles.settingItem, styles.dangerItem]} onPress={handleSignOut}>
           <View style={styles.settingInfo}>
             <Text style={styles.settingIcon}>🚪</Text>
             <View style={styles.settingDetails}>
               <Text style={[styles.settingLabel, styles.dangerText]}>Sign Out</Text>
-              <Text style={[styles.settingDescription, styles.dangerText]}>
-                Log out of your account
-              </Text>
+              <Text style={[styles.settingDescription, styles.dangerText]}>Log out of your account</Text>
             </View>
           </View>
           <Text style={styles.settingArrow}>▶</Text>
@@ -401,15 +322,48 @@ export default function SettingsScreen() {
       {/* Footer */}
       <View style={styles.footer}>
         <Text style={[styles.version, { color: navTheme.colors.text }]}>StudyMate v1.0.0</Text>
-        <Text style={[styles.footerText, { color: navTheme.colors.text }]}>
-          Made with ❤️ for students
-        </Text>
+        <Text style={[styles.footerText, { color: navTheme.colors.text }]}>Made with ❤️ for students</Text>
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  themeButtonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    marginBottom: 4,
+    width: '100%',
+  },
+  themeButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 0,
+  },
+  themeButtonText: {
+    color: '#222',
+    fontWeight: '600',
+    fontSize: 15,
+    textAlign: 'center',
+  },
+  themeButtonActive: {
+    backgroundColor: '#0070f3', // fallback, overridden by theme
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  themeButtonSpacer: {
+    width: 10,
+  },
   container: { flex: 1, backgroundColor: '#f8fafc' },
   header: {
     marginTop: 20,
