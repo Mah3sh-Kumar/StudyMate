@@ -1,14 +1,14 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { useTheme } from '@react-navigation/native';
+import { useThemePreference } from '../../contexts/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
 
 export default function HomeScreen() {
-  const navTheme = useTheme();
+  const { colors } = useThemePreference();
   const navigation = useNavigation();
 
-  const navigateToTab = (tabName) => {
-    navigation.navigate(tabName);
+  const navigateToScreen = (screenName) => {
+    navigation.navigate(screenName);
   };
 
   const features = [
@@ -17,70 +17,70 @@ export default function HomeScreen() {
       title: '💬 AI Chat',
       description: 'Get instant help with study questions',
       color: '#3B82F6',
-      onPress: () => navigateToTab('chat')
+      onPress: () => navigateToScreen('chat')
     },
     {
       id: 2,
       title: '🧠 Quiz',
       description: 'Create custom quizzes',
       color: '#F59E0B',
-      onPress: () => navigateToTab('quiz')
+      onPress: () => navigation.navigate('quiz')
     },
     {
       id: 3,
       title: '🃏 Flashcards',
       description: 'Study with interactive cards',
       color: '#EF4444',
-      onPress: () => navigateToTab('flashcards')
+      onPress: () => navigation.navigate('flashcards')
     },
     {
       id: 4,
       title: '📝 Summarizer',
       description: 'Summarize notes instantly',
       color: '#10B981',
-      onPress: () => navigateToTab('summarizer')
+      onPress: () => navigation.navigate('summarizer')
     },
     {
       id: 5,
       title: '👥 Groups',
       description: 'Study with classmates',
       color: '#EC4899',
-      onPress: () => navigateToTab('groups')
+      onPress: () => navigateToScreen('groups')
     },
     {
       id: 6,
       title: '📊 Tracker',
       description: 'Monitor your progress',
       color: '#06B6D4',
-      onPress: () => navigateToTab('tracker')
+      onPress: () => navigation.navigate('tracker')
     }
   ];
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: navTheme.colors.background }]} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.welcomeText, { color: navTheme.colors.text }]}>Welcome back! 👋</Text>
-        <Text style={[styles.subtitle, { color: navTheme.colors.text }]}>Your AI-powered study companion</Text>
+        <Text style={[styles.welcomeText, { color: colors.text }]}>Welcome back! 👋</Text>
+        <Text style={[styles.subtitle, { color: colors.text, opacity: 0.8 }]}>Your AI-powered study companion</Text>
       </View>
 
       {/* Features Grid */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>Study Tools</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Study Tools</Text>
         <View style={styles.featuresGrid}>
           {features.map((feature) => (
             <TouchableOpacity
               key={feature.id}
-              style={[styles.featureCard, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}
+              style={[styles.featureCard, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={feature.onPress}
             >
               <View style={[styles.featureIcon, { backgroundColor: feature.color }]}>
                 <Text style={styles.featureIconText}>{feature.title.split(' ')[0]}</Text>
               </View>
-              <Text style={[styles.featureTitle, { color: navTheme.colors.text }]}>
+              <Text style={[styles.featureTitle, { color: colors.text }]}>
                 {feature.title.split(' ').slice(1).join(' ')}
               </Text>
-              <Text style={[styles.featureDescription, { color: navTheme.colors.text }]}>
+              <Text style={[styles.featureDescription, { color: colors.text, opacity: 0.7 }]}>
                 {feature.description}
               </Text>
             </TouchableOpacity>
@@ -90,14 +90,14 @@ export default function HomeScreen() {
 
       {/* Quick Start */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>Quick Start</Text>
-        <View style={[styles.quickStartContainer, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
-          <Text style={[styles.quickStartText, { color: navTheme.colors.text }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Quick Start</Text>
+        <View style={[styles.quickStartContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.quickStartText, { color: colors.text, opacity: 0.8 }]}>
             Ready to study? Choose a tool above to get started!
           </Text>
           <TouchableOpacity 
-            style={[styles.quickStartButton, { backgroundColor: navTheme.colors.primary || '#6366f1' }]}
-            onPress={() => navigateToTab('flashcards')}
+            style={[styles.quickStartButton, { backgroundColor: colors.primary }]}
+            onPress={() => navigation.navigate('flashcards')}
           >
             <Text style={styles.quickStartButtonText}>🚀 Start Learning</Text>
           </TouchableOpacity>
@@ -119,10 +119,12 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 28,
     fontWeight: 'bold',
+    lineHeight: 34,
   },
   subtitle: {
     fontSize: 16,
-    marginTop: 4,
+    marginTop: 8,
+    lineHeight: 22,
   },
   section: {
     marginTop: 10,
@@ -148,6 +150,11 @@ const styles = StyleSheet.create({
     minHeight: 160,
     width: '45%',
     marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   featureIcon: {
     width: 50,
@@ -171,21 +178,33 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
     lineHeight: 18,
+    marginTop: 4,
   },
   quickStartContainer: {
     marginHorizontal: 20,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   quickStartText: {
     fontSize: 16,
     marginBottom: 16,
   },
   quickStartButton: {
-    paddingVertical: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
     borderRadius: 12,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   quickStartButtonText: {
     color: '#FFFFFF',

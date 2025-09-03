@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, Animated } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { useTheme } from '@react-navigation/native';
+import { useThemePreference } from '../contexts/ThemeContext';
 import { generateFlashcardsWithOpenAI } from '../api/api';
 import { flashcardService } from '../lib/database';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function FlashcardsScreen() {
-  const navTheme = useTheme();
+  const { colors } = useThemePreference();
   const { user } = useAuth();
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -380,8 +380,8 @@ export default function FlashcardsScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: navTheme.colors.background }]}>
-        <Text style={[styles.loadingText, { color: navTheme.colors.text }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Text style={[styles.loadingText, { color: colors.text }]}>
           Loading flashcards...
         </Text>
       </View>
@@ -393,48 +393,48 @@ export default function FlashcardsScreen() {
   // Show empty state when no flashcards exist
   if (!flashcards || flashcards.length === 0) {
     return (
-      <ScrollView style={[styles.container, { backgroundColor: navTheme.colors.background }]} showsVerticalScrollIndicator={false}>
+      <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: navTheme.colors.text }]}>📚 Flashcards</Text>
-          <Text style={[styles.subtitle, { color: navTheme.colors.text }]}>
+          <Text style={[styles.title, { color: colors.text }]}>📚 Flashcards</Text>
+          <Text style={[styles.subtitle, { color: colors.text, opacity: 0.8 }]}>
             No cards yet
           </Text>
         </View>
 
         {/* Empty State */}
         <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyIcon, { color: navTheme.colors.text }]}>📝</Text>
-          <Text style={[styles.emptyText, { color: navTheme.colors.text }]}>No Flashcards Yet</Text>
-          <Text style={[styles.emptySubtext, { color: navTheme.colors.text }]}>
+          <Text style={[styles.emptyIcon, { color: colors.text, opacity: 0.7 }]}>📝</Text>
+          <Text style={[styles.emptyText, { color: colors.text }]}>No Flashcards Yet</Text>
+          <Text style={[styles.emptySubtext, { color: colors.text, opacity: 0.7 }]}>
             Start by creating your first deck or adding some flashcards to get started with your studies!
           </Text>
           
           <View style={styles.emptyActions}>
             <TouchableOpacity 
-              style={[styles.emptyButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+              style={[styles.emptyButton, { backgroundColor: colors.card, borderColor: colors.border }]} 
               onPress={() => setShowDeckSelector(true)}
             >
-              <Text style={[styles.emptyButtonText, { color: navTheme.colors.text }]}>➕ Create Deck</Text>
+              <Text style={[styles.emptyButtonText, { color: colors.text }]}>➕ Create Deck</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={[styles.emptyButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+              style={[styles.emptyButton, { backgroundColor: colors.card, borderColor: colors.border }]} 
               onPress={() => setShowAIGenerator(true)}
             >
-              <Text style={[styles.emptyButtonText, { color: navTheme.colors.text }]}>🤖 Generate with AI</Text>
+              <Text style={[styles.emptyButtonText, { color: colors.text }]}>🤖 Generate with AI</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* AI Generator Section */}
         {showAIGenerator && (
-          <View style={[styles.aiSection, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
-            <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>🤖 Generate with AI</Text>
+          <View style={[styles.aiSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>🤖 Generate with AI</Text>
             <TextInput
-              style={[styles.aiInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+              style={[styles.aiInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
               placeholder="Enter your study material here..."
-              placeholderTextColor={navTheme.colors.text}
+              placeholderTextColor={colors.text + '80'}
               value={aiInput}
               onChangeText={setAiInput}
               multiline
@@ -442,7 +442,7 @@ export default function FlashcardsScreen() {
             />
             <View style={styles.aiButtons}>
               <TouchableOpacity 
-                style={[styles.button, styles.generateButton]} 
+                style={[styles.button, styles.generateButton, { backgroundColor: colors.primary }]} 
                 onPress={generateWithAI}
                 disabled={isGenerating}
               >
@@ -451,7 +451,7 @@ export default function FlashcardsScreen() {
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.button, styles.cancelButton]} 
+                style={[styles.button, styles.cancelButton, { backgroundColor: colors.notification }]} 
                 onPress={() => setShowAIGenerator(false)}
               >
                 <Text style={styles.buttonText}>❌ Cancel</Text>
@@ -462,34 +462,34 @@ export default function FlashcardsScreen() {
 
         {/* Deck Selector */}
         {showDeckSelector && (
-          <View style={[styles.formSection, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
-            <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>➕ Create New Deck</Text>
+          <View style={[styles.formSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>➕ Create New Deck</Text>
             <TextInput
-              style={[styles.input, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+              style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
               placeholder="Deck name (e.g., Math Formulas)"
-              placeholderTextColor={navTheme.colors.text}
+              placeholderTextColor={colors.text + '80'}
               value={newDeckName}
               onChangeText={setNewDeckName}
             />
             <TextInput
-              style={[styles.input, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+              style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
               placeholder="Description (optional)"
-              placeholderTextColor={navTheme.colors.text}
+              placeholderTextColor={colors.text + '80'}
               value={newDeckDescription}
               onChangeText={setNewDeckDescription}
             />
             <TextInput
-              style={[styles.input, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+              style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
               placeholder="Subject (e.g., Mathematics)"
-              placeholderTextColor={navTheme.colors.text}
+              placeholderTextColor={colors.text + '80'}
               value={newDeckSubject}
               onChangeText={setNewDeckSubject}
             />
             <View style={styles.formButtons}>
-              <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={createDeck}>
+              <TouchableOpacity style={[styles.button, styles.saveButton, { backgroundColor: colors.primary }]} onPress={createDeck}>
                 <Text style={styles.buttonText}>💾 Create Deck</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={() => setShowDeckSelector(false)}>
+              <TouchableOpacity style={[styles.button, styles.cancelButton, { backgroundColor: colors.notification }]} onPress={() => setShowDeckSelector(false)}>
                 <Text style={styles.buttonText}>❌ Cancel</Text>
               </TouchableOpacity>
             </View>
@@ -533,7 +533,7 @@ export default function FlashcardsScreen() {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.button, styles.cancelButton]} 
+              style={[styles.button, styles.cancelButton, { backgroundColor: colors.notification }]} 
               onPress={() => setShowAIGenerator(false)}
             >
               <Text style={styles.buttonText}>❌ Cancel</Text>
@@ -545,7 +545,7 @@ export default function FlashcardsScreen() {
       {/* Flashcard Display */}
       <View style={styles.cardContainer}>
         <TouchableOpacity 
-          style={[styles.card, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+          style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]} 
           onPress={currentCard ? flipCard : null}
           activeOpacity={currentCard ? 0.9 : 1}
         >
@@ -560,10 +560,10 @@ export default function FlashcardsScreen() {
               }]
             }
           ]}>
-            <Text style={[styles.cardText, { color: navTheme.colors.text }]}>
+            <Text style={[styles.cardText, { color: colors.text }]}>
             {isFlipped ? currentCard?.back || 'No answer available' : currentCard?.front || 'No question available'}
           </Text>
-            <Text style={[styles.flipHint, { color: navTheme.colors.text }]}>
+            <Text style={[styles.flipHint, { color: colors.text, opacity: 0.6 }]}>
             {isFlipped ? '👆 Tap to see question' : '👆 Tap to see answer'}
           </Text>
           </Animated.View>
@@ -573,79 +573,79 @@ export default function FlashcardsScreen() {
       {/* Navigation Controls */}
       <View style={styles.controls}>
         <TouchableOpacity 
-          style={[styles.navButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+          style={[styles.navButton, { backgroundColor: colors.card, borderColor: colors.border }]} 
           onPress={prevCard} 
           disabled={currentCardIndex === 0}
         >
-          <Text style={[styles.navButtonText, currentCardIndex === 0 && styles.disabledText]}>◀</Text>
+          <Text style={[styles.navButtonText, { color: colors.primary }, currentCardIndex === 0 && { opacity: 0.3 }]}>◀</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={[styles.flipButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+          style={[styles.flipButton, { backgroundColor: colors.card, borderColor: colors.border }]} 
           onPress={flipCard}
         >
-          <Text style={styles.flipButtonText}>🔄</Text>
+          <Text style={[styles.flipButtonText, { color: colors.primary }]}>🔄</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={[styles.navButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+          style={[styles.navButton, { backgroundColor: colors.card, borderColor: colors.border }]} 
           onPress={nextCard} 
           disabled={currentCardIndex === flashcards.length - 1}
         >
-          <Text style={[styles.navButtonText, currentCardIndex === flashcards.length - 1 && styles.disabledText]}>▶</Text>
+          <Text style={[styles.navButtonText, { color: colors.primary }, currentCardIndex === flashcards.length - 1 && { opacity: 0.3 }]}>▶</Text>
         </TouchableOpacity>
       </View>
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
         <TouchableOpacity 
-          style={[styles.button, styles.addButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+          style={[styles.button, styles.addButton, { backgroundColor: colors.card, borderColor: colors.border }]} 
           onPress={() => setShowAddForm(true)}
         >
-          <Text style={[styles.buttonText, { color: navTheme.colors.text }]}>➕ Add Card</Text>
+          <Text style={[styles.buttonText, { color: colors.text }]}>➕ Add Card</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={[styles.button, styles.aiButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+          style={[styles.button, styles.aiButton, { backgroundColor: colors.card, borderColor: colors.border }]} 
           onPress={() => setShowAIGenerator(true)}
         >
-          <Text style={[styles.buttonText, { color: navTheme.colors.text }]}>🤖 Generate with AI</Text>
+          <Text style={[styles.buttonText, { color: colors.text }]}>🤖 Generate with AI</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={[styles.button, styles.shuffleButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+          style={[styles.button, styles.shuffleButton, { backgroundColor: colors.card, borderColor: colors.border }]} 
           onPress={shuffleCards}
         >
-          <Text style={[styles.buttonText, { color: navTheme.colors.text }]}>🔀 Shuffle</Text>
+          <Text style={[styles.buttonText, { color: colors.text }]}>🔀 Shuffle</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={[styles.button, styles.shareButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+          style={[styles.button, styles.shareButton, { backgroundColor: colors.card, borderColor: colors.border }]} 
           onPress={shareDeck}
         >
-          <Text style={[styles.buttonText, { color: navTheme.colors.text }]}>📤 Share Deck</Text>
+          <Text style={[styles.buttonText, { color: colors.text }]}>📤 Share Deck</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={[styles.button, styles.deleteButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+          style={[styles.button, styles.deleteButton, { backgroundColor: colors.card, borderColor: colors.border }]} 
           onPress={() => currentCard && deleteCard(currentCard.id)}
           disabled={!currentCard}
         >
-          <Text style={[styles.buttonText, { color: navTheme.colors.text }]}>🗑️ Delete Card</Text>
+          <Text style={[styles.buttonText, { color: colors.text }]}>🗑️ Delete Card</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={[styles.button, styles.exportButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+          style={[styles.button, styles.exportButton, { backgroundColor: colors.card, borderColor: colors.border }]} 
           onPress={exportCards}
         >
-          <Text style={[styles.buttonText, { color: navTheme.colors.text }]}>📁 Export Deck</Text>
+          <Text style={[styles.buttonText, { color: colors.text }]}>📁 Export Deck</Text>
         </TouchableOpacity>
       </View>
 
       {/* Add New Card Form */}
       {showAddForm && (
         <View style={[styles.formSection, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
-          <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>➕ Add New Card</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>➕ Add New Card</Text>
           <TextInput
             style={[styles.input, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
             placeholder="Front of card (question/term)"
@@ -663,10 +663,10 @@ export default function FlashcardsScreen() {
             numberOfLines={3}
           />
           <View style={styles.formButtons}>
-            <TouchableOpacity style={[styles.button, styles.saveButton]} onPress={addCard}>
+            <TouchableOpacity style={[styles.button, styles.saveButton, { backgroundColor: colors.primary }]} onPress={addCard}>
               <Text style={styles.buttonText}>💾 Save Card</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={() => setShowAddForm(false)}>
+            <TouchableOpacity style={[styles.button, styles.cancelButton, { backgroundColor: colors.notification }]} onPress={() => setShowAddForm(false)}>
               <Text style={styles.buttonText}>❌ Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -693,7 +693,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
     textAlign: 'center',
   },
   emptyContainer: {
@@ -715,7 +714,6 @@ const styles = StyleSheet.create({
   },
   emptySubtext: {
     fontSize: 16,
-    color: '#6B7280',
     textAlign: 'center',
     marginBottom: 30,
     lineHeight: 22,
@@ -778,7 +776,6 @@ const styles = StyleSheet.create({
   },
   flipHint: {
     fontSize: 14,
-    color: '#9CA3AF',
     textAlign: 'center',
     fontStyle: 'italic',
   },
@@ -801,7 +798,6 @@ const styles = StyleSheet.create({
   },
   navButtonText: {
     fontSize: 20,
-    color: '#6366F1',
     fontWeight: 'bold',
   },
   disabledText: {
@@ -819,7 +815,6 @@ const styles = StyleSheet.create({
   },
   flipButtonText: {
     fontSize: 20,
-    color: '#6366F1',
   },
   actionButtons: {
     flexDirection: 'row',
@@ -846,31 +841,31 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   addButton: {
-    backgroundColor: '#22C55E',
+    // No background color - will be set via theme
   },
   aiButton: {
-    backgroundColor: '#6366F1',
+    // No background color - will be set via theme
   },
   shuffleButton: {
-    backgroundColor: '#F59E0B',
+    // No background color - will be set via theme
   },
   shareButton: {
-    backgroundColor: '#8B5CF6',
+    // No background color - will be set via theme
   },
   deleteButton: {
-    backgroundColor: '#EF4444',
+    // No background color - will be set via theme
   },
   exportButton: {
-    backgroundColor: '#06B6D4',
+    // No background color - will be set via theme
   },
   generateButton: {
-    backgroundColor: '#6366F1',
+    // No background color - will be set via theme
   },
   cancelButton: {
-    backgroundColor: '#EF4444',
+    // No background color - will be set via theme
   },
   saveButton: {
-    backgroundColor: '#22C55E',
+    // No background color - will be set via theme
   },
   formSection: {
     marginTop: 20,

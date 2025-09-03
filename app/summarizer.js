@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
-import { useTheme } from '@react-navigation/native';
+import { useThemePreference } from '../contexts/ThemeContext';
 import { summarizeTextWithOpenAI } from '../api/api';
 
 export default function SummarizerScreen() {
   const [notes, setNotes] = useState('');
   const [summary, setSummary] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const navTheme = useTheme();
+  const { colors } = useThemePreference();
 
   const handleSummarize = async () => {
     if (!notes.trim()) {
@@ -52,22 +52,22 @@ export default function SummarizerScreen() {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: navTheme.colors.background }]} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.title, { color: navTheme.colors.text }]}>📝 AI Summarizer</Text>
-        <Text style={[styles.subtitle, { color: navTheme.colors.text }]}>
+        <Text style={[styles.title, { color: colors.text }]}>📝 AI Summarizer</Text>
+        <Text style={[styles.subtitle, { color: colors.text, opacity: 0.8 }]}>
           Summarize your notes and text instantly
         </Text>
       </View>
 
       {/* Input Section */}
-      <View style={[styles.inputSection, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
-        <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>📝 Your Notes</Text>
+      <View style={[styles.inputSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>📝 Your Notes</Text>
         <TextInput
-          style={[styles.notesInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+          style={[styles.notesInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
           placeholder="Paste your notes, text, or any content here..."
-          placeholderTextColor={navTheme.colors.text}
+          placeholderTextColor={colors.text + '80'}
           value={notes}
           onChangeText={setNotes}
           multiline
@@ -76,7 +76,7 @@ export default function SummarizerScreen() {
         />
         
         <TouchableOpacity
-          style={[styles.summarizeButton, { backgroundColor: navTheme.colors.primary || '#6366F1' }]}
+          style={[styles.summarizeButton, { backgroundColor: colors.primary }]}
           onPress={handleSummarize}
           disabled={isProcessing || !notes.trim()}
         >
@@ -88,34 +88,34 @@ export default function SummarizerScreen() {
 
       {/* Summary Section */}
       {summary && (
-        <View style={[styles.summarySection, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
-          <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>📋 Summary</Text>
-          <Text style={[styles.summaryText, { color: navTheme.colors.text }]}>
+        <View style={[styles.summarySection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>📋 Summary</Text>
+          <Text style={[styles.summaryText, { color: colors.text }]}>
             {summary}
           </Text>
           
           <View style={styles.summaryActions}>
             <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: navTheme.colors.primary || '#6366F1' }]}
+              style={[styles.actionButton, { backgroundColor: colors.primary }]}
               onPress={copyToClipboard}
             >
               <Text style={styles.actionButtonText}>📋 Copy</Text>
             </TouchableOpacity>
             
             <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}
+              style={[styles.actionButton, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={clearAll}
             >
-              <Text style={[styles.actionButtonText, { color: navTheme.colors.text }]}>🗑️ Clear</Text>
+              <Text style={[styles.actionButtonText, { color: colors.text }]}>🗑️ Clear</Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
 
       {/* Instructions */}
-      <View style={[styles.instructionsSection, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
-        <Text style={[styles.instructionsTitle, { color: navTheme.colors.text }]}>💡 How it works</Text>
-        <Text style={[styles.instructionsText, { color: navTheme.colors.text }]}>
+      <View style={[styles.instructionsSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.instructionsTitle, { color: colors.text }]}>💡 How it works</Text>
+        <Text style={[styles.instructionsText, { color: colors.text, opacity: 0.8 }]}>
           1. Paste or type your notes/text{'\n'}
           2. Click "Summarize" to get AI-powered summary{'\n'}
           3. Copy the summary for your studies
@@ -142,7 +142,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
     textAlign: 'center',
   },
   inputSection: {

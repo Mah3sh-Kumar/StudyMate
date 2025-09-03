@@ -12,28 +12,30 @@ import {
 } from 'react-native';
 
 
-import { useTheme } from '@react-navigation/native';
-import { router } from 'expo-router';
-import { useAuth } from '../contexts/AuthContext';
 import { useThemePreference } from '../contexts/ThemeContext';
-import { userService } from '../lib/database';
+import { useAuth } from '../contexts/AuthContext';
+import { router } from 'expo-router';
+import { userService, dbUtils } from '../lib/database';
+import { DatabaseSetup } from '../lib/setupDatabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function SettingsScreen() {
   const { user, signOut, updateProfile } = useAuth();
-  const { theme, toggleTheme, setTheme } = useThemePreference();
-  const navTheme = useTheme();
+  const { theme, toggleTheme, setTheme, colors } = useThemePreference();
 
   const [notifications, setNotifications] = useState(true);
   const [aiFeatures, setAiFeatures] = useState(true);
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
+  const [dbStatus, setDbStatus] = useState('checking');
+  const [dbStats, setDbStats] = useState(null);
 
   // Load user profile data + preferences
   useEffect(() => {
     if (user) {
       loadUserProfile();
+      checkDatabaseStatus();
     }
     loadPreferences();
   }, [user]);
@@ -60,6 +62,62 @@ export default function SettingsScreen() {
       console.error('Error loading profile:', error);
       setFullName(user?.user_metadata?.full_name || '');
       setUsername(user?.user_metadata?.username || '');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Check database status and load stats
+  const checkDatabaseStatus = async () => {
+    try {
+      const status = await DatabaseSetup.checkStatus();
+      setDbStatus(status.status);
+      
+      if (status.status === 'connected') {
+        const stats = await DatabaseSetup.getStats();
+        if (stats.success) {
+          setDbStats(stats.data);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking database status:', error);
+      setDbStatus('error');
+    }
+  };
+
+  // Initialize database
+  const handleInitializeDatabase = async () => {
+    try {
+      setLoading(true);
+      const result = await DatabaseSetup.setupAndTest();
+      
+      if (result.success) {
+        Alert.alert('✅ Success', 'Database initialized successfully!');
+        await checkDatabaseStatus();
+      } else {
+        Alert.alert('❌ Error', result.error);
+      }
+    } catch (error) {
+      Alert.alert('❌ Error', dbUtils.handleError(error));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Create sample data
+  const handleCreateSampleData = async () => {
+    try {
+      setLoading(true);
+      const result = await DatabaseSetup.createSampleData();
+      
+      if (result.success) {
+        Alert.alert('✅ Success', 'Sample data created successfully!');
+        await checkDatabaseStatus();
+      } else {
+        Alert.alert('❌ Error', result.error);
+      }
+    } catch (error) {
+      Alert.alert('❌ Error', dbUtils.handleError(error));
     } finally {
       setLoading(false);
     }
@@ -178,55 +236,55 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: navTheme.colors.background }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
       showsVerticalScrollIndicator={false}
     >
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}> 
+      <View style={[styles.header, { backgroundColor: colors.card, borderColor: colors.border }]}> 
         <View style={styles.headerContent}>
-          <Text style={[styles.title, { color: navTheme.colors.text }]}>⚙️ Settings</Text>
-          <Text style={[styles.subtitle, { color: navTheme.colors.text }]}>Manage your account and preferences</Text>
+          <Text style={[styles.title, { color: colors.text }]}>⚙️ Settings</Text>
+          <Text style={[styles.subtitle, { color: colors.text, opacity: 0.8 }]}>Manage your account and preferences</Text>
         </View>
-        <View style={[styles.headerDecoration, { backgroundColor: navTheme.colors.primary || '#6366f1' }]} />
+        <View style={[styles.headerDecoration, { backgroundColor: colors.primary }]} />
       </View>
 
       {/* Profile Section */}
-      <View style={[styles.section, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}> 
+      <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}> 
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>👤 Profile</Text>
-          <Text style={[styles.sectionSubtitle, { color: navTheme.colors.text }]}>Manage your personal information</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>👤 Profile</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.text, opacity: 0.7 }]}>Manage your personal information</Text>
         </View>
         <View style={styles.profileInfo}>
-          <View style={[styles.avatar, { backgroundColor: navTheme.colors.primary || '#6366f1' }]}> 
+          <View style={[styles.avatar, { backgroundColor: colors.primary }]}> 
             <Text style={styles.avatarText}>{fullName.charAt(0) || user?.email?.charAt(0) || 'U'}</Text>
           </View>
           <View style={styles.profileDetails}>
-            <Text style={[styles.profileName, { color: navTheme.colors.text }]}>{fullName || 'User'}</Text>
-            <Text style={[styles.profileEmail, { color: navTheme.colors.text }]}>{user?.email}</Text>
+            <Text style={[styles.profileName, { color: colors.text }]}>{fullName || 'User'}</Text>
+            <Text style={[styles.profileEmail, { color: colors.text, opacity: 0.7 }]}>{user?.email}</Text>
           </View>
         </View>
         <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: navTheme.colors.text }]}>Full Name</Text>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>Full Name</Text>
           <TextInput
-            style={[styles.input, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+            style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
             value={fullName}
             onChangeText={setFullName}
             placeholder="Your full name"
-            placeholderTextColor={navTheme.colors.text}
+            placeholderTextColor={colors.text + '80'}
           />
         </View>
         <View style={styles.inputGroup}>
-          <Text style={[styles.inputLabel, { color: navTheme.colors.text }]}>Username</Text>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>Username</Text>
           <TextInput
-            style={[styles.input, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+            style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
             value={username}
             onChangeText={setUsername}
             placeholder="Choose a username"
-            placeholderTextColor={navTheme.colors.text}
+            placeholderTextColor={colors.text + '80'}
             autoCapitalize="none"
           />
         </View>
-        <TouchableOpacity style={[styles.saveButton, { backgroundColor: navTheme.colors.primary || '#6366f1' }]} onPress={handleSaveProfile} disabled={loading}>
+        <TouchableOpacity style={[styles.saveButton, { backgroundColor: colors.primary }]} onPress={handleSaveProfile} disabled={loading}>
           {loading ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
@@ -239,32 +297,32 @@ export default function SettingsScreen() {
       </View>
 
       {/* Preferences Section */}
-      <View style={[styles.section, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}> 
+      <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}> 
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>🎨 Preferences</Text>
-          <Text style={[styles.sectionSubtitle, { color: navTheme.colors.text }]}>Customize your app experience</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>🎨 Preferences</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.text, opacity: 0.7 }]}>Customize your app experience</Text>
         </View>
         {/* Theme Buttons */}
         <View style={styles.themeButtonRow}>
           <TouchableOpacity
-            style={[styles.themeButton, theme === 'light' && styles.themeButtonActive, { borderColor: navTheme.colors.border, backgroundColor: theme === 'light' ? navTheme.colors.primary : navTheme.colors.card }]}
+            style={[styles.themeButton, theme === 'light' && styles.themeButtonActive, { borderColor: colors.border, backgroundColor: theme === 'light' ? colors.primary : colors.card }]}
             onPress={() => setTheme('light')}
           >
-            <Text style={styles.themeButtonText} numberOfLines={1}>Light</Text>
+            <Text style={[styles.themeButtonText, { color: theme === 'light' ? '#fff' : colors.text }]} numberOfLines={1}>Light</Text>
           </TouchableOpacity>
           <View style={styles.themeButtonSpacer} />
           <TouchableOpacity
-            style={[styles.themeButton, theme === 'dark' && styles.themeButtonActive, { borderColor: navTheme.colors.border, backgroundColor: theme === 'dark' ? navTheme.colors.primary : navTheme.colors.card }]}
+            style={[styles.themeButton, theme === 'dark' && styles.themeButtonActive, { borderColor: colors.border, backgroundColor: theme === 'dark' ? colors.primary : colors.card }]}
             onPress={() => setTheme('dark')}
           >
-            <Text style={styles.themeButtonText} numberOfLines={1}>Dark</Text>
+            <Text style={[styles.themeButtonText, { color: theme === 'dark' ? '#fff' : colors.text }]} numberOfLines={1}>Dark</Text>
           </TouchableOpacity>
           <View style={styles.themeButtonSpacer} />
           <TouchableOpacity
-            style={[styles.themeButton, theme === 'amoled' && styles.themeButtonActive, { borderColor: navTheme.colors.border, backgroundColor: theme === 'amoled' ? navTheme.colors.primary : navTheme.colors.card }]}
+            style={[styles.themeButton, theme === 'amoled' && styles.themeButtonActive, { borderColor: colors.border, backgroundColor: theme === 'amoled' ? colors.primary : colors.card }]}
             onPress={() => setTheme('amoled')}
           >
-            <Text style={styles.themeButtonText} numberOfLines={1}>AMOLED</Text>
+            <Text style={[styles.themeButtonText, { color: theme === 'amoled' ? '#fff' : colors.text }]} numberOfLines={1}>AMOLED</Text>
           </TouchableOpacity>
         </View>
         {/* Notifications */}
@@ -272,30 +330,94 @@ export default function SettingsScreen() {
           <View style={styles.settingInfo}>
             <Text style={styles.settingIcon}>🔔</Text>
             <View style={styles.settingDetails}>
-              <Text style={[styles.settingLabel, { color: navTheme.colors.text }]}>Notifications</Text>
-              <Text style={[styles.settingDescription, { color: navTheme.colors.text }]}>Receive study reminders and updates</Text>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>Notifications</Text>
+              <Text style={[styles.settingDescription, { color: colors.text, opacity: 0.7 }]}>Receive study reminders and updates</Text>
             </View>
           </View>
-          <Switch value={notifications} onValueChange={(val) => savePreferences({ notifications: val })} trackColor={{ false: '#d1d5db', true: navTheme.colors.primary || '#6366f1' }} thumbColor={'#ffffff'} />
+          <Switch value={notifications} onValueChange={(val) => savePreferences({ notifications: val })} trackColor={{ false: '#d1d5db', true: colors.primary }} thumbColor={'#ffffff'} />
         </View>
         {/* AI Features */}
         <View style={styles.settingItem}>
           <View style={styles.settingInfo}>
             <Text style={styles.settingIcon}>🤖</Text>
             <View style={styles.settingDetails}>
-              <Text style={[styles.settingLabel, { color: navTheme.colors.text }]}>AI Features</Text>
-              <Text style={[styles.settingDescription, { color: navTheme.colors.text }]}>Enable AI-powered study assistance</Text>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>AI Features</Text>
+              <Text style={[styles.settingDescription, { color: colors.text, opacity: 0.7 }]}>Enable AI-powered study assistance</Text>
             </View>
           </View>
-          <Switch value={aiFeatures} onValueChange={(val) => savePreferences({ aiFeatures: val })} trackColor={{ false: '#d1d5db', true: navTheme.colors.primary || '#6366f1' }} thumbColor={'#ffffff'} />
+          <Switch value={aiFeatures} onValueChange={(val) => savePreferences({ aiFeatures: val })} trackColor={{ false: '#d1d5db', true: colors.primary }} thumbColor={'#ffffff'} />
         </View>
       </View>
 
-      {/* Account Actions */}
-      <View style={[styles.section, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}> 
+      {/* Database Section */}
+      <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>⚠️ Account Actions</Text>
-          <Text style={[styles.sectionSubtitle, { color: navTheme.colors.text }]}>Manage your account</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>💾 Database</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.text, opacity: 0.7 }]}>Manage your data and database connection</Text>
+        </View>
+        
+        {/* Database Status */}
+        <View style={styles.settingItem}>
+          <View style={styles.settingInfo}>
+            <Text style={styles.settingIcon}>🔗</Text>
+            <View style={styles.settingDetails}>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>Database Status</Text>
+              <Text style={[styles.settingDescription, { color: colors.text, opacity: 0.7 }]}>Connection: {dbStatus}</Text>
+            </View>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: dbStatus === 'connected' ? '#10B981' : dbStatus === 'error' ? '#EF4444' : '#F59E0B' }]}>
+            <Text style={styles.statusText}>{dbStatus === 'connected' ? '✓' : dbStatus === 'error' ? '✗' : '?'}</Text>
+          </View>
+        </View>
+        
+        {/* Database Stats */}
+        {dbStats && (
+          <View style={styles.settingItem}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingIcon}>📊</Text>
+              <View style={styles.settingDetails}>
+                <Text style={[styles.settingLabel, { color: colors.text }]}>Your Data</Text>
+                <Text style={[styles.settingDescription, { color: colors.text, opacity: 0.7 }]}>
+                  {dbStats.decks} decks, {dbStats.flashcards} cards, {dbStats.sessions} sessions, {dbStats.groups} groups
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
+        
+        {/* Database Actions */}
+        {dbStatus !== 'connected' && (
+          <TouchableOpacity style={[styles.settingItem, styles.actionItem]} onPress={handleInitializeDatabase}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingIcon}>⚙️</Text>
+              <View style={styles.settingDetails}>
+                <Text style={[styles.settingLabel, { color: colors.primary }]}>Initialize Database</Text>
+                <Text style={[styles.settingDescription, { color: colors.text, opacity: 0.7 }]}>Set up database tables and structure</Text>
+              </View>
+            </View>
+            <Text style={[styles.settingArrow, { color: colors.primary }]}>▶</Text>
+          </TouchableOpacity>
+        )}
+        
+        {dbStatus === 'connected' && (!dbStats || (dbStats.decks === 0 && dbStats.flashcards === 0)) && (
+          <TouchableOpacity style={[styles.settingItem, styles.actionItem]} onPress={handleCreateSampleData}>
+            <View style={styles.settingInfo}>
+              <Text style={styles.settingIcon}>🌱</Text>
+              <View style={styles.settingDetails}>
+                <Text style={[styles.settingLabel, { color: colors.primary }]}>Create Sample Data</Text>
+                <Text style={[styles.settingDescription, { color: colors.text, opacity: 0.7 }]}>Add sample flashcards and groups to get started</Text>
+              </View>
+            </View>
+            <Text style={[styles.settingArrow, { color: colors.primary }]}>▶</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Account Actions */}
+      <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}> 
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>⚠️ Account Actions</Text>
+          <Text style={[styles.sectionSubtitle, { color: colors.text, opacity: 0.7 }]}>Manage your account</Text>
         </View>
         <TouchableOpacity style={[styles.settingItem, styles.dangerItem]} onPress={handleDeleteAccount}>
           <View style={styles.settingInfo}>
@@ -321,8 +443,8 @@ export default function SettingsScreen() {
 
       {/* Footer */}
       <View style={styles.footer}>
-        <Text style={[styles.version, { color: navTheme.colors.text }]}>StudyMate v1.0.0</Text>
-        <Text style={[styles.footerText, { color: navTheme.colors.text }]}>Made with ❤️ for students</Text>
+        <Text style={[styles.version, { color: colors.text }]}>StudyMate v1.0.0</Text>
+        <Text style={[styles.footerText, { color: colors.text, opacity: 0.7 }]}>Made with ❤️ for students</Text>
       </View>
     </ScrollView>
   );
@@ -348,13 +470,11 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   themeButtonText: {
-    color: '#222',
     fontWeight: '600',
     fontSize: 15,
     textAlign: 'center',
   },
   themeButtonActive: {
-    backgroundColor: '#0070f3', // fallback, overridden by theme
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
@@ -364,7 +484,7 @@ const styles = StyleSheet.create({
   themeButtonSpacer: {
     width: 10,
   },
-  container: { flex: 1, backgroundColor: '#f8fafc' },
+  container: { flex: 1 },
   header: {
     marginTop: 20,
     marginHorizontal: 20,
@@ -380,13 +500,12 @@ const styles = StyleSheet.create({
   headerContent: { padding: 24, alignItems: 'center' },
   headerDecoration: { height: 4, width: '100%' },
   title: { fontSize: 32, fontWeight: 'bold', marginBottom: 8 },
-  subtitle: { fontSize: 16, color: '#64748b', textAlign: 'center', lineHeight: 22 },
+  subtitle: { fontSize: 16, textAlign: 'center', lineHeight: 22 },
   section: {
     marginTop: 20,
     marginHorizontal: 20,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -401,7 +520,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f1f5f9',
   },
   sectionTitle: { fontSize: 20, fontWeight: '700', marginBottom: 4 },
-  sectionSubtitle: { fontSize: 14, color: '#6b7280' },
+  sectionSubtitle: { fontSize: 14 },
   profileInfo: { flexDirection: 'row', alignItems: 'center', padding: 20 },
   avatar: {
     width: 70, height: 70, borderRadius: 35,
@@ -410,7 +529,7 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 28, fontWeight: 'bold', color: '#fff' },
   profileDetails: { flex: 1 },
   profileName: { fontSize: 24, fontWeight: '700', marginBottom: 4 },
-  profileEmail: { fontSize: 16, color: '#6b7280' },
+  profileEmail: { fontSize: 16 },
   inputGroup: { paddingHorizontal: 20, paddingBottom: 16 },
   inputLabel: { fontSize: 16, fontWeight: '600', marginBottom: 8 },
   input: { borderWidth: 1, borderRadius: 12, padding: 16, fontSize: 16 },
@@ -424,11 +543,26 @@ const styles = StyleSheet.create({
   settingIcon: { fontSize: 20, marginRight: 16, width: 24, textAlign: 'center' },
   settingDetails: { flex: 1 },
   settingLabel: { fontSize: 16, fontWeight: '600', marginBottom: 2 },
-  settingDescription: { fontSize: 14, color: '#6b7280' },
+  settingDescription: { fontSize: 14 },
   settingArrow: { fontSize: 16, color: '#9ca3af' },
   dangerItem: { borderBottomColor: '#fee2e2' },
   dangerText: { color: '#dc2626' },
+  statusBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statusText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  actionItem: {
+    backgroundColor: 'transparent',
+  },
   footer: { padding: 30, alignItems: 'center', marginTop: 20 },
   version: { fontSize: 16, fontWeight: '600', marginBottom: 8 },
-  footerText: { fontSize: 14, color: '#6b7280', fontStyle: 'italic' },
+  footerText: { fontSize: 14, fontStyle: 'italic' },
 });

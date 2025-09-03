@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
-import { useTheme } from '@react-navigation/native';
+import { useThemePreference } from '../contexts/ThemeContext';
 import { generateQuizWithOpenAI } from '../api/api';
 
 export default function QuizScreen() {
-  const navTheme = useTheme();
+  const { colors } = useThemePreference();
   const [studyMaterial, setStudyMaterial] = useState('');
   const [quiz, setQuiz] = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -134,29 +134,29 @@ export default function QuizScreen() {
 
   if (!quiz) {
     return (
-      <ScrollView style={[styles.container, { backgroundColor: navTheme.colors.background }]} showsVerticalScrollIndicator={false}>
+      <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: navTheme.colors.text }]}>🧠 Quiz Generator</Text>
-          <Text style={[styles.subtitle, { color: navTheme.colors.text }]}>
+          <Text style={[styles.title, { color: colors.text }]}>🧠 Quiz Generator</Text>
+          <Text style={[styles.subtitle, { color: colors.text, opacity: 0.8 }]}>
             Generate quizzes from your study material
           </Text>
         </View>
 
         {/* Input Section */}
-        <View style={[styles.inputSection, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
-          <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>📝 Study Material</Text>
+        <View style={[styles.inputSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>📝 Study Material</Text>
           <TextInput
-            style={[styles.textInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+            style={[styles.textInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
             placeholder="Enter your study material, notes, or topic here..."
-            placeholderTextColor={navTheme.colors.text}
+            placeholderTextColor={colors.text + '80'}
             value={studyMaterial}
             onChangeText={setStudyMaterial}
             multiline
             numberOfLines={6}
           />
           <TouchableOpacity
-            style={[styles.generateButton, { backgroundColor: navTheme.colors.primary || '#6366F1' }]}
+            style={[styles.generateButton, { backgroundColor: colors.primary }]}
             onPress={handleGenerateQuiz}
             disabled={isGenerating || !studyMaterial.trim()}
           >
@@ -167,9 +167,9 @@ export default function QuizScreen() {
         </View>
 
         {/* Instructions */}
-        <View style={[styles.instructionsSection, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
-          <Text style={[styles.instructionsTitle, { color: navTheme.colors.text }]}>💡 How it works</Text>
-          <Text style={[styles.instructionsText, { color: navTheme.colors.text }]}>
+        <View style={[styles.instructionsSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.instructionsTitle, { color: colors.text }]}>💡 How it works</Text>
+          <Text style={[styles.instructionsText, { color: colors.text, opacity: 0.8 }]}>
             1. Enter your study material or topic{'\n'}
             2. AI generates relevant quiz questions{'\n'}
             3. Test your knowledge and learn
@@ -182,21 +182,21 @@ export default function QuizScreen() {
   if (showResults) {
     const score = getScore();
     return (
-      <ScrollView style={[styles.container, { backgroundColor: navTheme.colors.background }]} showsVerticalScrollIndicator={false}>
+      <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
         {/* Results Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: navTheme.colors.text }]}>📊 Quiz Results</Text>
-          <Text style={[styles.subtitle, { color: navTheme.colors.text }]}>
+          <Text style={[styles.title, { color: colors.text }]}>📊 Quiz Results</Text>
+          <Text style={[styles.subtitle, { color: colors.text, opacity: 0.8 }]}>
             {score.correct} out of {score.total} correct
           </Text>
         </View>
 
         {/* Score Display */}
-        <View style={[styles.scoreContainer, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
-          <Text style={[styles.scoreText, { color: navTheme.colors.text }]}>
+        <View style={[styles.scoreContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.scoreText, { color: colors.text }]}>
             {score.percentage}%
           </Text>
-          <Text style={[styles.scoreLabel, { color: navTheme.colors.text }]}>
+          <Text style={[styles.scoreLabel, { color: colors.text, opacity: 0.8 }]}>
             {score.percentage >= 80 ? 'Excellent!' : score.percentage >= 60 ? 'Good job!' : 'Keep studying!'}
           </Text>
         </View>
@@ -204,7 +204,7 @@ export default function QuizScreen() {
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: navTheme.colors.primary || '#6366F1' }]}
+            style={[styles.actionButton, { backgroundColor: colors.primary }]}
             onPress={resetQuiz}
           >
             <Text style={styles.actionButtonText}>🔄 New Quiz</Text>
@@ -217,18 +217,18 @@ export default function QuizScreen() {
   const question = quiz.questions[currentQuestion];
 
   return (
-    <View style={[styles.container, { backgroundColor: navTheme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.title, { color: navTheme.colors.text }]}>🧠 Quiz</Text>
+        <Text style={[styles.title, { color: colors.text }]}>🧠 Quiz</Text>
         <Text style={[styles.subtitle, { color: navTheme.colors.text }]}>
           Question {currentQuestion + 1} of {quiz.questions.length}
         </Text>
       </View>
 
       {/* Question */}
-      <View style={[styles.questionContainer, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
-        <Text style={[styles.questionText, { color: navTheme.colors.text }]}>
+      <View style={[styles.questionContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.questionText, { color: colors.text }]}>
           {question.question}
         </Text>
       </View>
@@ -240,12 +240,12 @@ export default function QuizScreen() {
             key={index}
             style={[
               styles.optionButton,
-              { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border },
-              selectedAnswers[question.id] === index && styles.selectedOption
+              { backgroundColor: colors.card, borderColor: colors.border },
+              selectedAnswers[question.id] === index && { backgroundColor: colors.primary + '20', borderColor: colors.primary }
             ]}
             onPress={() => selectAnswer(question.id, index)}
           >
-            <Text style={[styles.optionText, { color: navTheme.colors.text }]}>
+            <Text style={[styles.optionText, { color: colors.text }]}>
               {option}
             </Text>
           </TouchableOpacity>
@@ -255,26 +255,26 @@ export default function QuizScreen() {
       {/* Navigation */}
       <View style={styles.navigationContainer}>
         <TouchableOpacity
-          style={[styles.navButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}
+          style={[styles.navButton, { backgroundColor: colors.card, borderColor: colors.border }]}
           onPress={prevQuestion}
           disabled={currentQuestion === 0}
         >
-          <Text style={[styles.navButtonText, { color: navTheme.colors.text }]}>◀ Previous</Text>
+          <Text style={[styles.navButtonText, { color: colors.text }]}>◀ Previous</Text>
         </TouchableOpacity>
 
         {currentQuestion === quiz.questions.length - 1 ? (
           <TouchableOpacity
-            style={[styles.submitButton, { backgroundColor: navTheme.colors.primary || '#6366F1' }]}
+            style={[styles.submitButton, { backgroundColor: colors.primary }]}
             onPress={submitQuiz}
           >
             <Text style={styles.submitButtonText}>📊 Submit Quiz</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
-            style={[styles.navButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}
+            style={[styles.navButton, { backgroundColor: colors.card, borderColor: colors.border }]}
             onPress={nextQuestion}
           >
-            <Text style={[styles.navButtonText, { color: navTheme.colors.text }]}>Next ▶</Text>
+            <Text style={[styles.navButtonText, { color: colors.text }]}>Next ▶</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -299,7 +299,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
     textAlign: 'center',
   },
   inputSection: {
@@ -392,7 +391,6 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   selectedOption: {
-    borderColor: '#6366F1',
     borderWidth: 2,
   },
   optionText: {

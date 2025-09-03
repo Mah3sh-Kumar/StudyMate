@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { useTheme } from '@react-navigation/native';
-import { studySessionService } from '../lib/database';
+import { useThemePreference } from '../contexts/ThemeContext';
+import { studySessionService, dbUtils } from '../lib/database';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function TrackerScreen() {
-  const navTheme = useTheme();
+  const { colors } = useThemePreference();
   const { user } = useAuth();
   const [isTracking, setIsTracking] = useState(false);
   const [currentSession, setCurrentSession] = useState(null);
@@ -70,32 +70,67 @@ export default function TrackerScreen() {
       return;
     }
 
-    // Mock session creation
-    const mockSession = {
-      id: Date.now().toString(),
-      subject: sessionSubject.trim(),
-      startTime: new Date(),
-      notes: sessionNotes,
-    };
-
-    setCurrentSession(mockSession);
-    setIsTracking(true);
-    setSessionTimer(0);
-    setShowSessionForm(false);
-    setSessionSubject('');
-    setSessionNotes('');
-    Alert.alert('🚀 Session Started', `Study session for ${sessionSubject.trim()} has begun!`);
+    try {
+      setLoading(true);
+      
+      // Create session in database
+      const { data, error } = await studySessionService.startSession(user.id, {
+        subject: sessionSubject.trim(),
+        tags: sessionNotes ? [sessionNotes] : []
+      });
+      
+      if (error) {
+        Alert.alert('❌ Error', dbUtils.handleError(error));
+        return;
+      }
+      
+      setCurrentSession(data);
+      setIsTracking(true);
+      setSessionTimer(0);
+      setShowSessionForm(false);
+      setSessionSubject('');
+      setSessionNotes('');
+      Alert.alert('🚀 Session Started', `Study session for ${sessionSubject.trim()} has begun!`);
+    } catch (error) {
+      console.error('Error starting session:', error);
+      Alert.alert('❌ Error', dbUtils.handleError(error));
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Mock stop session logic
+  // Stop the current study session
   const stopSession = async () => {
     if (!currentSession) return;
-    setCurrentSession(null);
-    setIsTracking(false);
-    setSessionTimer(0);
-    setSessionNotes('');
-    setIsPaused(false);
-    Alert.alert('✅ Session Complete', 'Session stopped!');
+    
+    try {
+      setLoading(true);
+      
+      // End session in database with notes
+      const { error } = await studySessionService.endSession(currentSession.id, sessionNotes);
+      
+      if (error) {
+        Alert.alert('❌ Error', dbUtils.handleError(error));
+        return;
+      }
+      
+      // Update local state
+      setCurrentSession(null);
+      setIsTracking(false);
+      setSessionTimer(0);
+      setSessionNotes('');
+      setIsPaused(false);
+      
+      // Reload sessions to show updated data
+      await loadStudySessions();
+      
+      Alert.alert('✅ Session Complete', 'Session stopped and saved!');
+    } catch (error) {
+      console.error('Error stopping session:', error);
+      Alert.alert('❌ Error', dbUtils.handleError(error));
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Pause/resume session logic
@@ -185,8 +220,8 @@ export default function TrackerScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: navTheme.colors.background }]}>
-        <Text style={[styles.loadingText, { color: navTheme.colors.text }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Text style={[styles.loadingText, { color: colors.text }]}>
           Loading study sessions...
         </Text>
       </View>
@@ -245,25 +280,25 @@ export default function TrackerScreen() {
   const periodTotal = periodSessions.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: navTheme.colors.background }]}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: navTheme.colors.text }]}>Study Time Tracker</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Study Time Tracker</Text>
       </View>
 
       {/* Current Session */}
       {isTracking && currentSession && (
-        <View style={[styles.currentSessionCard, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
+        <View style={[styles.currentSessionCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={styles.currentSessionTitle}>🔄 Current Session</Text>
-          <Text style={[styles.currentSessionSubject, { color: navTheme.colors.text }]}>{currentSession.subject}</Text>
-          <Text style={[styles.currentSessionTime, { color: navTheme.colors.text }]}>
+          <Text style={[styles.currentSessionSubject, { color: colors.text }]}>{currentSession.subject}</Text>
+          <Text style={[styles.currentSessionTime, { color: colors.text, opacity: 0.7 }]}>
             Started at {new Date(currentSession.start_time).toTimeString().substring(0, 5)}
           </Text>
-          <Text style={[styles.timerDisplay, { color: navTheme.colors.text }]}>{formatTime(sessionTimer)}</Text>
+          <Text style={[styles.timerDisplay, { color: colors.text }]}>{formatTime(sessionTimer)}</Text>
           <View style={styles.sessionControls}>
-            <TouchableOpacity style={styles.pauseButton} onPress={pauseSession}>
+            <TouchableOpacity style={[styles.pauseButton, { backgroundColor: colors.border }]} onPress={pauseSession}>
               <Text style={styles.pauseButtonText}>⏸️ Pause</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.stopButton} onPress={stopSession}>
+            <TouchableOpacity style={[styles.stopButton, { backgroundColor: colors.notification }]} onPress={stopSession}>
               <Text style={styles.stopButtonText}>⏹️ Stop Session</Text>
             </TouchableOpacity>
           </View>
@@ -273,7 +308,7 @@ export default function TrackerScreen() {
       {/* Start Session Button */}
       {!isTracking && (
         <View style={styles.startSection}>
-          <TouchableOpacity style={styles.startButton} onPress={() => setShowSessionForm(true)}>
+          <TouchableOpacity style={[styles.startButton, { backgroundColor: colors.primary }]} onPress={() => setShowSessionForm(true)}>
             <Text style={styles.startButtonText}>▶️ Start Study Session</Text>
           </TouchableOpacity>
         </View>
@@ -282,21 +317,21 @@ export default function TrackerScreen() {
       {/* Session Form Modal */}
       {showSessionForm && (
         <View style={styles.modalOverlay}>
-          <View style={[styles.modal, { backgroundColor: navTheme.colors.card }]}>
-            <Text style={[styles.modalTitle, { color: navTheme.colors.text }]}>Start Study Session</Text>
+          <View style={[styles.modal, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Start Study Session</Text>
             
             <TextInput
-              style={[styles.modalInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+              style={[styles.modalInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
               placeholder="Subject (e.g., Math, Biology)"
-              placeholderTextColor={navTheme.colors.text}
+              placeholderTextColor={colors.text + '80'}
               value={sessionSubject}
               onChangeText={setSessionSubject}
             />
             
             <TextInput
-              style={[styles.modalInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+              style={[styles.modalInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
               placeholder="Notes (optional)"
-              placeholderTextColor={navTheme.colors.text}
+              placeholderTextColor={colors.text + '80'}
               value={sessionNotes}
               onChangeText={setSessionNotes}
               multiline
@@ -305,14 +340,14 @@ export default function TrackerScreen() {
             
             <View style={styles.modalActions}>
               <TouchableOpacity 
-                style={[styles.cancelButton, { backgroundColor: navTheme.colors.border }]}
+                style={[styles.cancelButton, { backgroundColor: colors.border }]}
                 onPress={() => setShowSessionForm(false)}
               >
-                <Text style={[styles.cancelText, { color: navTheme.colors.text }]}>Cancel</Text>
+                <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={styles.confirmButton}
+                style={[styles.confirmButton, { backgroundColor: colors.primary }]}
                 onPress={startSession}
               >
                 <Text style={styles.confirmText}>Start Session</Text>
@@ -323,50 +358,50 @@ export default function TrackerScreen() {
       )}
 
       {/* Period Selector */}
-      <View style={[styles.periodSelector, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
+      <View style={[styles.periodSelector, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <TouchableOpacity 
           style={[styles.periodTab, selectedPeriod === 'today' && styles.activePeriodTab]} 
           onPress={() => setSelectedPeriod('today')}
         >
-          <Text style={[styles.periodText, selectedPeriod === 'today' && styles.activePeriodText]}>Today</Text>
+          <Text style={[styles.periodText, { color: colors.text }, selectedPeriod === 'today' && { color: '#fff' }]}>Today</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.periodTab, selectedPeriod === 'week' && styles.activePeriodTab]} 
           onPress={() => setSelectedPeriod('week')}
         >
-          <Text style={[styles.periodText, selectedPeriod === 'week' && styles.activePeriodText]}>Week</Text>
+          <Text style={[styles.periodText, { color: colors.text }, selectedPeriod === 'week' && { color: '#fff' }]}>Week</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.periodTab, selectedPeriod === 'month' && styles.activePeriodTab]} 
           onPress={() => setSelectedPeriod('month')}
         >
-          <Text style={[styles.periodText, selectedPeriod === 'month' && styles.activePeriodText]}>Month</Text>
+          <Text style={[styles.periodText, { color: colors.text }, selectedPeriod === 'month' && { color: '#fff' }]}>Month</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.periodTab, selectedPeriod === 'all' && styles.activePeriodTab]} 
           onPress={() => setSelectedPeriod('all')}
         >
-          <Text style={[styles.periodText, selectedPeriod === 'all' && styles.activePeriodText]}>All Time</Text>
+          <Text style={[styles.periodText, { color: colors.text }, selectedPeriod === 'all' && { color: '#fff' }]}>All Time</Text>
         </TouchableOpacity>
       </View>
 
       {/* Summary Stats */}
       <View style={styles.statsSection}>
-        <View style={[styles.statCard, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
+        <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={styles.statLabel}>Total Study Time</Text>
-          <Text style={[styles.statValue, { color: navTheme.colors.text }]}>{formatTime(periodTotal)}</Text>
+          <Text style={[styles.statValue, { color: colors.text }]}>{formatTime(periodTotal)}</Text>
           <Text style={styles.statPeriod}>{selectedPeriod.charAt(0).toUpperCase() + selectedPeriod.slice(1)}</Text>
         </View>
         
-        <View style={[styles.statCard, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
+        <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={styles.statLabel}>Sessions</Text>
-          <Text style={[styles.statValue, { color: navTheme.colors.text }]}>{periodSessions.length}</Text>
+          <Text style={[styles.statValue, { color: colors.text }]}>{periodSessions.length}</Text>
           <Text style={styles.statPeriod}>Completed</Text>
         </View>
         
-        <View style={[styles.statCard, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
+        <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={styles.statLabel}>Average</Text>
-          <Text style={[styles.statValue, { color: navTheme.colors.text }]}>
+          <Text style={[styles.statValue, { color: colors.text }]}>
             {periodSessions.length > 0 ? formatTime(Math.round(periodTotal / periodSessions.length)) : '0m'}
           </Text>
           <Text style={styles.statPeriod}>Per Session</Text>
@@ -375,18 +410,18 @@ export default function TrackerScreen() {
 
       {/* Subject Breakdown */}
       <View style={styles.subjectSection}>
-        <Text style={styles.sectionTitle}>📚 Subject Breakdown</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>📚 Subject Breakdown</Text>
         {subjectStats.map((stat, index) => (
-          <View key={index} style={[styles.subjectItem, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
+          <View key={index} style={[styles.subjectItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.subjectInfo}>
-              <Text style={[styles.subjectName, { color: navTheme.colors.text }]}>{stat.subject}</Text>
-              <Text style={styles.subjectTime}>{formatTime(stat.duration)}</Text>
+              <Text style={[styles.subjectName, { color: colors.text }]}>{stat.subject}</Text>
+              <Text style={[styles.subjectTime, { color: colors.primary }]}>{formatTime(stat.duration)}</Text>
             </View>
             <View style={styles.subjectBar}>
               <View 
                 style={[
                   styles.subjectProgress, 
-                  { width: `${(stat.duration / periodTotal) * 100}%` }
+                  { backgroundColor: colors.primary, width: `${(stat.duration / periodTotal) * 100}%` }
                 ]} 
               />
             </View>
@@ -397,21 +432,21 @@ export default function TrackerScreen() {
       {/* Recent Sessions */}
       <View style={styles.sessionsSection}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>📅 Recent Sessions</Text>
-          <TouchableOpacity style={styles.exportButton} onPress={exportData}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>📅 Recent Sessions</Text>
+          <TouchableOpacity style={[styles.exportButton, { backgroundColor: colors.primary }]} onPress={exportData}>
             <Text style={styles.exportText}>Export</Text>
           </TouchableOpacity>
         </View>
         {periodSessions.slice(0, 5).map((session) => (
-          <View key={session.id} style={[styles.sessionItem, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
+          <View key={session.id} style={[styles.sessionItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
                          <View style={styles.sessionInfo}>
-               <Text style={[styles.sessionSubject, { color: navTheme.colors.text }]}>{session.subject}</Text>
-               <Text style={[styles.sessionDate, { color: navTheme.colors.text }]}>
+               <Text style={[styles.sessionSubject, { color: colors.text }]}>{session.subject}</Text>
+               <Text style={[styles.sessionDate, { color: colors.text, opacity: 0.6 }]}>
                  {new Date(session.start_time).toLocaleDateString()} at {new Date(session.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                </Text>
              </View>
              <View style={styles.sessionActions}>
-               <Text style={styles.sessionDuration}>{formatTime(session.duration_minutes * 60)}</Text>
+               <Text style={[styles.sessionDuration, { color: colors.primary }]}>{formatTime(session.duration_minutes * 60)}</Text>
               <TouchableOpacity style={styles.editButton} onPress={() => editSession(session)}>
                 <Text style={styles.editText}>✏️</Text>
               </TouchableOpacity>
@@ -425,41 +460,41 @@ export default function TrackerScreen() {
 
       {/* Goals and Insights */}
       <View style={styles.insightsSection}>
-        <Text style={styles.sectionTitle}>🎯 Insights & Goals</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>🎯 Insights & Goals</Text>
         
-        <View style={[styles.insightCard, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
+        <View style={[styles.insightCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={styles.insightIcon}>📈</Text>
           <View style={styles.insightContent}>
-            <Text style={styles.insightTitle}>Daily Goal Progress</Text>
-            <Text style={styles.insightText}>
+            <Text style={[styles.insightTitle, { color: colors.text }]}>Daily Goal Progress</Text>
+            <Text style={[styles.insightText, { color: colors.text, opacity: 0.8 }]}>
               You're {Math.round((periodTotal / 240) * 100)}% to your daily goal of 4 hours
             </Text>
             <View style={styles.goalBar}>
               <View 
                 style={[
                   styles.goalProgress, 
-                  { width: `${Math.min((periodTotal / 240) * 100, 100)}%` }
+                  { backgroundColor: colors.primary, width: `${Math.min((periodTotal / 240) * 100, 100)}%` }
                 ]} 
               />
             </View>
           </View>
         </View>
         
-        <View style={[styles.insightCard, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
+        <View style={[styles.insightCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={styles.insightIcon}>⏰</Text>
           <View style={styles.insightContent}>
-            <Text style={styles.insightTitle}>Best Study Time</Text>
-            <Text style={styles.insightText}>
+            <Text style={[styles.insightTitle, { color: colors.text }]}>Best Study Time</Text>
+            <Text style={[styles.insightText, { color: colors.text, opacity: 0.8 }]}>
               Your most productive sessions are in the morning (9-11 AM)
             </Text>
           </View>
         </View>
         
-        <View style={[styles.insightCard, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
+        <View style={[styles.insightCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={styles.insightIcon}>🎓</Text>
           <View style={styles.insightContent}>
-            <Text style={styles.insightTitle}>Top Subject</Text>
-            <Text style={styles.insightText}>
+            <Text style={[styles.insightTitle, { color: colors.text }]}>Top Subject</Text>
+            <Text style={[styles.insightText, { color: colors.text, opacity: 0.8 }]}>
               Biology is your most studied subject this week
             </Text>
           </View>
@@ -468,7 +503,7 @@ export default function TrackerScreen() {
 
       {/* Action Buttons */}
       <View style={styles.actionSection}>
-        <TouchableOpacity style={styles.shareButton} onPress={shareProgress}>
+        <TouchableOpacity style={[styles.shareButton, { backgroundColor: colors.primary }]} onPress={shareProgress}>
           <Text style={styles.shareText}>📤 Share Progress</Text>
         </TouchableOpacity>
       </View>
@@ -482,7 +517,6 @@ export default function TrackerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
     padding: 20,
   },
   header: {
@@ -493,43 +527,40 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1F2937',
   },
   headerSubtitle: {
     fontSize: 16,
-    color: '#6B7280',
     marginTop: 8,
     textAlign: 'center',
   },
   currentSessionCard: {
-    backgroundColor: '#fff',
     padding: 20,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     marginBottom: 24,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   currentSessionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1F2937',
     marginBottom: 8,
   },
   currentSessionSubject: {
     fontSize: 16,
-    color: '#6B7280',
     marginBottom: 4,
   },
   currentSessionTime: {
     fontSize: 14,
-    color: '#9CA3AF',
     marginBottom: 16,
   },
   timerDisplay: {
     fontSize: 48,
     fontWeight: 'bold',
-    color: '#1F2937',
     marginBottom: 16,
   },
   sessionControls: {
@@ -537,7 +568,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   pauseButton: {
-    backgroundColor: '#6B7280',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -548,7 +578,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   stopButton: {
-    backgroundColor: '#EF4444',
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -562,11 +591,15 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   startButton: {
-    backgroundColor: '#10B981',
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 16,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   startButtonText: {
     color: '#fff',
@@ -575,12 +608,15 @@ const styles = StyleSheet.create({
   },
   periodSelector: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 4,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   periodTab: {
     flex: 1,
@@ -594,7 +630,6 @@ const styles = StyleSheet.create({
   periodText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#6B7280',
   },
   activePeriodText: {
     color: '#fff',
@@ -606,12 +641,15 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#fff',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   statLabel: {
     fontSize: 12,
@@ -621,7 +659,6 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1F2937',
     marginBottom: 4,
   },
   statPeriod: {
@@ -631,19 +668,21 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#374151',
     marginBottom: 16,
   },
   subjectSection: {
     marginBottom: 24,
   },
   subjectItem: {
-    backgroundColor: '#fff',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   subjectInfo: {
     flexDirection: 'row',
@@ -654,12 +693,10 @@ const styles = StyleSheet.create({
   subjectName: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#1F2937',
   },
   subjectTime: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#A78BFA',
   },
   subjectBar: {
     height: 8,
@@ -669,7 +706,6 @@ const styles = StyleSheet.create({
   },
   subjectProgress: {
     height: '100%',
-    backgroundColor: '#A78BFA',
     borderRadius: 4,
   },
   sessionsSection: {
@@ -682,10 +718,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   exportButton: {
-    backgroundColor: '#4F46E5',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   exportText: {
     color: '#fff',
@@ -693,15 +733,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   sessionItem: {
-    backgroundColor: '#fff',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     marginBottom: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   sessionInfo: {
     flex: 1,
@@ -709,12 +752,10 @@ const styles = StyleSheet.create({
   sessionSubject: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#1F2937',
     marginBottom: 4,
   },
   sessionDate: {
     fontSize: 12,
-    color: '#9CA3AF',
   },
   sessionActions: {
     flexDirection: 'row',
@@ -724,7 +765,6 @@ const styles = StyleSheet.create({
   sessionDuration: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#10B981',
   },
   editButton: {
     padding: 8,
@@ -744,14 +784,17 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   insightCard: {
-    backgroundColor: '#fff',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   insightIcon: {
     fontSize: 24,
@@ -764,12 +807,10 @@ const styles = StyleSheet.create({
   insightTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
     marginBottom: 8,
   },
   insightText: {
     fontSize: 14,
-    color: '#6B7280',
     lineHeight: 20,
     marginBottom: 12,
   },
@@ -781,18 +822,21 @@ const styles = StyleSheet.create({
   },
   goalProgress: {
     height: '100%',
-    backgroundColor: '#10B981',
     borderRadius: 3,
   },
   actionSection: {
     marginBottom: 24,
   },
   shareButton: {
-    backgroundColor: '#4F46E5',
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 16,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   shareText: {
     color: '#fff',
@@ -848,6 +892,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     width: '90%',
     maxWidth: 400,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   modalTitle: {
     fontSize: 20,
@@ -878,10 +928,14 @@ const styles = StyleSheet.create({
   },
   confirmButton: {
     flex: 1,
-    backgroundColor: '#10B981',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   confirmText: {
     fontSize: 16,

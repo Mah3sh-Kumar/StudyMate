@@ -1,48 +1,37 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Animated, Easing, Dimensions, StatusBar } from 'react-native-web';
+import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, Dimensions, StatusBar, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontAwesome } from '@expo/vector-icons';
+import { useThemePreference } from '../../contexts/ThemeContext';
 
 // Get the screen width for responsive design
 const { width } = Dimensions.get('window');
 const NUM_BARS = 60; // Number of bars in the waveform
 
 // A single animated bar component
-const WaveformBar = ({ animation }) => {
+const WaveformBar = ({ animation, primaryColor = '#3B82F6' }) => {
   const barStyle = {
     height: animation.interpolate({
       inputRange: [0, 1],
-      outputRange: ['2%', '100%'], // Animate height from 2% to 100%
+      outputRange: ['4%', '100%'], // Animate height from 4% to 100%
     }),
     opacity: animation.interpolate({
-        inputRange: [0, 0.2, 1],
-        outputRange: [0.5, 1, 0.5],
+      inputRange: [0, 0.2, 1],
+      outputRange: [0.4, 1, 0.4],
     })
   };
 
-  return <Animated.View style={[styles.waveformBar, barStyle]} />;
+  return <Animated.View style={[styles.waveformBar, { backgroundColor: primaryColor }, barStyle]} />;
 };
 
 
-export default function VoiceAssistantUI() {
+export default function HandsfreeScreen() {
+  const { colors } = useThemePreference();
   const [isRecording, setIsRecording] = useState(false);
+  const [recordingText, setRecordingText] = useState('Tap the microphone to start recording');
   const animations = useRef(Array.from({ length: NUM_BARS }, () => new Animated.Value(0))).current;
   const animationRef = useRef(null);
   
-  // This effect injects the FontAwesome font into the document head for web compatibility.
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.type = 'text/css';
-    const fontFace = `
-      @font-face {
-        font-family: 'FontAwesome';
-        src: url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/fonts/fontawesome-webfont.ttf?v=4.7.0') format('truetype');
-      }
-    `;
-    style.appendChild(document.createTextNode(fontFace));
-    document.head.appendChild(style);
-  }, []);
-
 
   // This function creates a looping animation sequence for the waveform
   const createAnimation = () => {
@@ -106,83 +95,144 @@ export default function VoiceAssistantUI() {
 
   // Handle microphone button press
   const handleMicPress = () => {
-    setIsRecording(!isRecording);
+    if (isRecording) {
+      // Stop recording
+      setIsRecording(false);
+      setRecordingText('Processing your request...');
+      
+      // Simulate processing
+      setTimeout(() => {
+        setRecordingText('Voice recording stopped. Tap to record again.');
+      }, 2000);
+    } else {
+      // Start recording
+      setIsRecording(true);
+      setRecordingText('Listening... Tap again to stop');
+      
+      // Check for microphone permissions (placeholder)
+      Alert.alert(
+        'Microphone Access',
+        'This feature requires microphone permissions. Please enable them in your device settings.',
+        [{ text: 'OK', onPress: () => {} }]
+      );
+    }
   };
 
   return (
-    <LinearGradient
-      colors={['#2A3A65', '#161C2E']}
-      style={styles.container}
-    >
-        <StatusBar barStyle="light-content" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={colors.text === '#FFFFFF' ? 'light-content' : 'dark-content'} />
+      
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: colors.text }]}>Hands-Free Mode</Text>
+        <Text style={[styles.subtitle, { color: colors.text, opacity: 0.7 }]}>Voice-powered study assistant</Text>
+      </View>
+
+      {/* Status Text */}
+      <View style={styles.statusContainer}>
+        <Text style={[styles.statusText, { color: colors.text, opacity: 0.8 }]}>{recordingText}</Text>
+      </View>
+
+      {/* Animated Waveform */}
+      <View style={styles.waveformContainer}>
+        {animations.map((animation, index) => (
+          <WaveformBar key={index} animation={animation} primaryColor={colors.primary} />
+        ))}
+      </View>
+
+      {/* Microphone Button */}
+      <View style={styles.micButtonContainer}>
+        <TouchableOpacity 
+          style={[
+            styles.micButton, 
+            { 
+              backgroundColor: isRecording ? colors.notification : colors.primary,
+              borderColor: colors.border 
+            }
+          ]} 
+          onPress={handleMicPress}
+          activeOpacity={0.8}
+        >
+          <FontAwesome 
+            name={isRecording ? 'stop-circle' : 'microphone'} 
+            size={32} 
+            color="white" 
+          />
+        </TouchableOpacity>
         
-        {/* Empty view to push the waveform down */}
-        <View style={styles.placeholderView} />
-
-        {/* --- Animated Waveform --- */}
-        <View style={styles.waveformContainer}>
-            {animations.map((animation, index) => (
-                <WaveformBar key={index} animation={animation} />
-            ))}
-        </View>
-        {/* --- End Waveform --- */}
-
-        {/* Empty view to push the microphone up */}
-        <View style={styles.placeholderView} />
-
-        {/* Microphone Button */}
-        <View style={styles.micButtonContainer}>
-            <TouchableOpacity style={styles.micButton} onPress={handleMicPress}>
-                <FontAwesome 
-                    name={isRecording ? 'stop-circle' : 'microphone'} 
-                    size={40} 
-                    color="white" 
-                />
-            </TouchableOpacity>
-        </View>
-
-    </LinearGradient>
+        <Text style={[styles.micButtonText, { color: colors.text, opacity: 0.6 }]}>
+          {isRecording ? 'Tap to stop' : 'Tap to start'}
+        </Text>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'space-between',
+    paddingTop: 60,
+    paddingBottom: 40,
+  },
+  header: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 40,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  statusContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 60,
     alignItems: 'center',
   },
-  placeholderView: {
-      flex: 1,
+  statusText: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
   },
   waveformContainer: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
-    maxHeight: 100,
+    height: 120,
+    marginBottom: 60,
+    paddingHorizontal: 20,
   },
   waveformBar: {
-    width: (width - (NUM_BARS * 4)) / NUM_BARS, // Calculate bar width dynamically
-    backgroundColor: '#98B1E4',
-    marginHorizontal: 2,
-    borderRadius: 5,
+    width: (width - 80) / NUM_BARS, // Calculate bar width dynamically
+    marginHorizontal: 1,
+    borderRadius: 3,
+    minHeight: 4,
   },
   micButtonContainer: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    maxHeight: 120,
+    paddingHorizontal: 20,
   },
   micButton: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.4)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    marginBottom: 12,
+  },
+  micButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
 

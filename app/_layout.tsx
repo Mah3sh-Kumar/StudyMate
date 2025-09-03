@@ -9,6 +9,7 @@ import { Menu } from 'lucide-react-native'; // Import Menu icon
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthProvider } from '../contexts/AuthContext';
 import { ThemeProviderCustom, useThemePreference } from '../contexts/ThemeContext';
+import DrawerContent from '../components/DrawerContent';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -22,27 +23,50 @@ export default function RootLayout() {
 }
 
 function InnerNavigator({ fallbackScheme }) {
-  const { theme, ready } = useThemePreference();
+  const { theme, ready, colors } = useThemePreference();
   const scheme = ready ? theme : (fallbackScheme === 'dark' ? 'dark' : 'light');
+
+  // Create custom navigation theme based on our app theme
+  const customNavigationTheme = {
+    dark: scheme === 'light' ? false : true,
+    colors: {
+      primary: colors?.primary || (scheme === 'light' ? DefaultTheme.colors.primary : DarkTheme.colors.primary),
+      background: colors?.background || (scheme === 'light' ? DefaultTheme.colors.background : DarkTheme.colors.background),
+      card: colors?.card || (scheme === 'light' ? DefaultTheme.colors.card : DarkTheme.colors.card),
+      text: colors?.text || (scheme === 'light' ? DefaultTheme.colors.text : DarkTheme.colors.text),
+      border: colors?.border || (scheme === 'light' ? DefaultTheme.colors.border : DarkTheme.colors.border),
+      notification: colors?.notification || (scheme === 'light' ? DefaultTheme.colors.notification : DarkTheme.colors.notification),
+    },
+    fonts: scheme === 'light' ? DefaultTheme.fonts : DarkTheme.fonts,
+  };
 
   const commonScreenOptions = ({ navigation }) => ({
     headerLeft: () => (
       <TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())} style={{ marginLeft: 15 }}>
-        <Menu color={scheme === 'dark' ? DarkTheme.colors.text : DefaultTheme.colors.text} />
+        <Menu color={colors?.text || (scheme === 'dark' || scheme === 'amoled' ? DarkTheme.colors.text : DefaultTheme.colors.text)} />
       </TouchableOpacity>
     ),
     headerStyle: {
-      backgroundColor: scheme === 'dark' ? DarkTheme.colors.card : DefaultTheme.colors.card,
+      backgroundColor: colors?.card || (scheme === 'dark' || scheme === 'amoled' ? DarkTheme.colors.card : DefaultTheme.colors.card),
     },
     headerTitleStyle: {
-      color: scheme === 'dark' ? DarkTheme.colors.text : DefaultTheme.colors.text,
+      color: colors?.text || (scheme === 'dark' || scheme === 'amoled' ? DarkTheme.colors.text : DefaultTheme.colors.text),
       fontWeight: 'bold',
     },
   });
 
   return (
-    <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Drawer>
+    <ThemeProvider value={customNavigationTheme}>
+      <Drawer
+        drawerContent={(props) => <DrawerContent {...props} />}
+        screenOptions={{
+          drawerStyle: {
+            backgroundColor: colors?.background,
+            width: 280,
+          },
+          headerShown: true,
+        }}
+      >
         <Drawer.Screen name="(tabs)" options={{ title: "StudyMate", ...commonScreenOptions }} />
         <Drawer.Screen name="plan" options={commonScreenOptions} />
         <Drawer.Screen name="quiz" options={commonScreenOptions} />
@@ -54,7 +78,7 @@ function InnerNavigator({ fallbackScheme }) {
         <Drawer.Screen name="auth/login" options={{ headerShown: false, drawerItemStyle: { height: 0 } }} />
         <Drawer.Screen name="auth/signup" options={{ headerShown: false, drawerItemStyle: { height: 0 } }} />
       </Drawer>
-      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      <StatusBar style={scheme === 'light' ? 'dark' : 'light'} backgroundColor={colors?.background} />
     </ThemeProvider>
   );
 }

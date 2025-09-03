@@ -1,8 +1,8 @@
-import React, { useContext } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { ThemeContext } from '../contexts/ThemeContext'; // adjust path as needed
+import { useThemePreference } from '../contexts/ThemeContext';
 
 const menuItems = [
   { label: 'Plan', icon: <MaterialCommunityIcons name="calendar-check" size={24} /> },
@@ -14,20 +14,12 @@ const menuItems = [
 ];
 
 const DrawerContent = ({ navigation, state }) => {
-  const { theme } = useContext(ThemeContext);
-  const isDark = theme === 'dark';
-  const colors = {
-    background: isDark ? '#181A20' : '#fff',
-    text: isDark ? '#fff' : '#222',
-    primary: isDark ? '#4F8EF7' : '#1976D2',
-    itemBg: isDark ? '#23262F' : '#F0F4FA',
-    footerBg: isDark ? '#181A20' : '#F8F9FB',
-  };
+  const { theme, colors } = useThemePreference();
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}> 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Text style={[styles.logo, { color: colors.primary }]}>StudyMate</Text>
       </View>
 
@@ -41,7 +33,7 @@ const DrawerContent = ({ navigation, state }) => {
               style={[
                 styles.menuItem,
                 focused && {
-                  backgroundColor: colors.primary + '22',
+                  backgroundColor: colors.primary + '20',
                   borderRadius: 12,
                 },
               ]}
@@ -70,7 +62,7 @@ const DrawerContent = ({ navigation, state }) => {
       </View>
 
       {/* Footer */}
-      <View style={[styles.footer, { backgroundColor: colors.footerBg }]}> 
+      <View style={[styles.footer, { backgroundColor: colors.card, borderTopColor: colors.border }]}> 
         <TouchableOpacity style={styles.footerBtn} onPress={() => navigation.navigate('About')}>
           <Ionicons name="information-circle-outline" size={18} color={colors.text} />
           <Text style={[styles.footerText, { color: colors.text }]}>About</Text>

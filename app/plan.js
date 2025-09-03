@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, FlatList, Alert } from 'react-native';
-import { useTheme } from '@react-navigation/native';
+import { useThemePreference } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { userService, studySessionService, dbUtils } from '../lib/database';
 
 // Mock data for a generated plan
 const mockPlan = [
@@ -11,11 +12,47 @@ const mockPlan = [
 ];
 
 export default function PlanScreen() {
-  const navTheme = useTheme();
+  const { colors } = useThemePreference();
+  const { user, updateStudyPreferences } = useAuth();
   const [subjects, setSubjects] = useState('');
   const [goals, setGoals] = useState('');
   const [plan, setPlan] = useState(null);
-  const { updateStudyPreferences } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [recentSessions, setRecentSessions] = useState([]);
+  const [userPreferences, setUserPreferences] = useState(null);
+
+  // Load user preferences and recent sessions on mount
+  useEffect(() => {
+    if (user) {
+      loadUserData();
+    }
+  }, [user]);
+
+  // Load user preferences and recent study sessions
+  const loadUserData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load user study preferences
+      const { data: preferences, error: prefError } = await userService.getStudyPreferences(user.id);
+      if (!prefError && preferences) {
+        setUserPreferences(preferences);
+        setSubjects(preferences.study_subjects?.join(', ') || '');
+        setGoals(preferences.study_goals?.join(', ') || '');
+      }
+      
+      // Load recent study sessions for insights
+      const { data: sessions, error: sessionsError } = await studySessionService.getUserSessions(user.id, 10);
+      if (!sessionsError && sessions) {
+        setRecentSessions(sessions);
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+      Alert.alert('❌ Error', dbUtils.handleError(error));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleGeneratePlan = () => {
     if (!subjects.trim() || !goals.trim()) {
@@ -31,74 +68,105 @@ export default function PlanScreen() {
   };
 
   const handleSavePreferences = async () => {
-    const { error } = await updateStudyPreferences(subjects.trim(), goals.trim());
-    if (error) Alert.alert('Error', error); else Alert.alert('Saved', 'Study preferences saved');
+    if (!subjects.trim() || !goals.trim()) {
+      Alert.alert('❌ Error', 'Please fill in both subjects and goals');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Parse subjects and goals into arrays
+      const subjectsArray = subjects.split(',').map(s => s.trim()).filter(s => s.length > 0);
+      const goalsArray = goals.split(',').map(g => g.trim()).filter(g => g.length > 0);
+      
+      // Update in auth context
+      const { error: authError } = await updateStudyPreferences(subjectsArray, goalsArray);
+      if (authError) {
+        Alert.alert('❌ Error', dbUtils.handleError(authError));
+        return;
+      }
+      
+      // Update in database
+      const { error: dbError } = await userService.updateStudyPreferences(user.id, subjectsArray, goalsArray);
+      if (dbError) {
+        console.warn('Database update failed:', dbError);
+      }
+      
+      Alert.alert('✅ Success', 'Study preferences saved successfully!');
+      await loadUserData(); // Refresh data
+    } catch (error) {
+      console.error('Error saving preferences:', error);
+      Alert.alert('❌ Error', dbUtils.handleError(error));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderPlanItem = ({ item }) => (
-    <View style={[styles.planItem, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
+    <View style={[styles.planItem, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={styles.planTimeContainer}>
-        <Text style={[styles.planTime, { color: navTheme.colors.primary || '#6366F1' }]}>{item.time}</Text>
+        <Text style={[styles.planTime, { color: colors.primary }]}>{item.time}</Text>
       </View>
       <View style={styles.planDetails}>
-        <Text style={[styles.planSubject, { color: navTheme.colors.text }]}>{item.subject}</Text>
-        <Text style={[styles.planTask, { color: navTheme.colors.text }]}>{item.task}</Text>
+        <Text style={[styles.planSubject, { color: colors.text }]}>{item.subject}</Text>
+        <Text style={[styles.planTask, { color: colors.text, opacity: 0.8 }]}>{item.task}</Text>
       </View>
-      <View style={[styles.checkbox, item.completed && styles.checkboxCompleted]} />
+      <View style={[styles.checkbox, { borderColor: colors.border }, item.completed && styles.checkboxCompleted]} />
     </View>
   );
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: navTheme.colors.background }]} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.title, { color: navTheme.colors.text }]}>📅 AI Study Planner</Text>
-        <Text style={[styles.subtitle, { color: navTheme.colors.text }]}>
+        <Text style={[styles.title, { color: colors.text }]}>📅 AI Study Planner</Text>
+        <Text style={[styles.subtitle, { color: colors.text, opacity: 0.7 }]}>
           Create personalized study schedules
         </Text>
       </View>
 
       {!plan ? (
         <View style={styles.formContainer}>
-          <View style={[styles.inputSection, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
-            <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>📚 Subjects</Text>
+          <View style={[styles.inputSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>📚 Subjects</Text>
             <TextInput
-              style={[styles.textInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+              style={[styles.textInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
               placeholder="Enter your subjects (e.g., Math, History, Biology)"
-              placeholderTextColor={navTheme.colors.text}
+              placeholderTextColor={colors.text + '80'}
               value={subjects}
               onChangeText={setSubjects}
             />
           </View>
           
-          <View style={[styles.inputSection, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
-            <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>🎯 Goals</Text>
+          <View style={[styles.inputSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>🎯 Goals</Text>
             <TextInput
-              style={[styles.textInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+              style={[styles.textInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
               placeholder="What are your study goals? (e.g., Ace my midterms)"
-              placeholderTextColor={navTheme.colors.text}
+              placeholderTextColor={colors.text + '80'}
               value={goals}
               onChangeText={setGoals}
             />
           </View>
           
           <TouchableOpacity 
-            style={[styles.generateButton, { backgroundColor: navTheme.colors.primary || '#6366F1' }]} 
+            style={[styles.generateButton, { backgroundColor: colors.primary }]} 
             onPress={handleGeneratePlan}
           >
             <Text style={styles.buttonText}>🚀 Generate Plan</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={[styles.saveButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+            style={[styles.saveButton, { backgroundColor: colors.card, borderColor: colors.border }]} 
             onPress={handleSavePreferences}
           >
-            <Text style={[styles.saveButtonText, { color: navTheme.colors.text }]}>💾 Save Preferences</Text>
+            <Text style={[styles.saveButtonText, { color: colors.text }]}>💾 Save Preferences</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <View style={styles.planContainer}>
-          <Text style={[styles.planTitle, { color: navTheme.colors.text }]}>Your Study Plan for Today</Text>
+          <Text style={[styles.planTitle, { color: colors.text }]}>Your Study Plan for Today</Text>
           <FlatList
             data={plan}
             renderItem={renderPlanItem}
@@ -106,7 +174,7 @@ export default function PlanScreen() {
             scrollEnabled={false}
           />
           <TouchableOpacity 
-            style={[styles.regenerateButton, { backgroundColor: navTheme.colors.primary || '#6366F1' }]} 
+            style={[styles.regenerateButton, { backgroundColor: colors.primary }]} 
             onPress={() => setPlan(null)}
           >
             <Text style={styles.regenerateButtonText}>🔄 Create New Plan</Text>
@@ -134,7 +202,6 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    color: '#6B7280',
     textAlign: 'center',
   },
   formContainer: {
@@ -220,6 +287,7 @@ const styles = StyleSheet.create({
     paddingRight: 16,
     borderRightWidth: 1,
     borderRightColor: '#E5E7EB',
+    minWidth: 100,
   },
   planTime: {
     fontWeight: '600',
@@ -236,14 +304,13 @@ const styles = StyleSheet.create({
   },
   planTask: {
     fontSize: 14,
-    opacity: 0.8,
+    lineHeight: 20,
   },
   checkbox: {
     width: 24,
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#D1D5DB',
   },
   checkboxCompleted: {
     backgroundColor: '#4ADE80',

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Alert } from 'react-native';
-import { useTheme } from '@react-navigation/native';
-import { studyGroupService } from '../../lib/database';
+import { useThemePreference } from '../../contexts/ThemeContext';
+import { studyGroupService, dbUtils } from '../../lib/database';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function GroupsScreen() {
-  const navTheme = useTheme();
+  const { colors } = useThemePreference();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('myGroups');
   const [searchQuery, setSearchQuery] = useState('');
@@ -15,15 +15,8 @@ export default function GroupsScreen() {
   const [newGroupSubject, setNewGroupSubject] = useState('');
   const [newGroupDescription, setNewGroupDescription] = useState('');
   const [loading, setLoading] = useState(true);
-  const [myGroups, setMyGroups] = useState([
-    { id: '1', name: 'Math Study Group', subject: 'Mathematics', description: 'Discuss math problems and concepts', members: 12, created_by: 'user1' },
-    { id: '2', name: 'AI Hackathon Team', subject: 'Artificial Intelligence', description: 'Team for AI competitions', members: 8, created_by: 'user2' }
-  ]);
-  const [availableGroups, setAvailableGroups] = useState([
-    { id: '3', name: 'Science Enthusiasts', subject: 'Science', description: 'Explore science topics together', members: 15, created_by: 'user3' },
-    { id: '4', name: 'React Native Learners', subject: 'Programming', description: 'Learn React Native as a group', members: 10, created_by: 'user4' },
-    { id: '5', name: 'Hackathon Builders', subject: 'General', description: 'Build projects for hackathons', members: 20, created_by: 'user5' }
-  ]);
+  const [myGroups, setMyGroups] = useState([]);
+  const [availableGroups, setAvailableGroups] = useState([]);
 
   // Load groups on component mount
   useEffect(() => {
@@ -52,6 +45,7 @@ export default function GroupsScreen() {
       const { data: userGroups, error: userGroupsError } = await studyGroupService.getUserGroups(user.id);
       if (userGroupsError) {
         console.error('Error loading user groups:', userGroupsError);
+        Alert.alert('❌ Error', dbUtils.handleError(userGroupsError));
       } else {
         setMyGroups(userGroups || []);
       }
@@ -60,6 +54,7 @@ export default function GroupsScreen() {
       const { data: publicGroups, error: publicGroupsError } = await studyGroupService.getPublicGroups();
       if (publicGroupsError) {
         console.error('Error loading public groups:', publicGroupsError);
+        Alert.alert('❌ Error', dbUtils.handleError(publicGroupsError));
       } else {
         // Filter out groups the user is already a member of
         const userGroupIds = (userGroups || []).map(g => g.id);
@@ -68,7 +63,7 @@ export default function GroupsScreen() {
       }
     } catch (error) {
       console.error('Error loading groups:', error);
-      Alert.alert('❌ Error', 'Failed to load study groups');
+      Alert.alert('❌ Error', dbUtils.handleError(error));
     } finally {
       setLoading(false);
     }
@@ -91,7 +86,7 @@ export default function GroupsScreen() {
       });
       
       if (error) {
-        Alert.alert('❌ Error', 'Failed to create group');
+        Alert.alert('❌ Error', dbUtils.handleError(error));
         return;
       }
       
@@ -115,7 +110,7 @@ export default function GroupsScreen() {
       const { error } = await studyGroupService.addMember(group.id, user.id, 'member');
       
       if (error) {
-        Alert.alert('❌ Error', 'Failed to join group');
+        Alert.alert('❌ Error', dbUtils.handleError(error));
         return;
       }
       
@@ -210,24 +205,24 @@ export default function GroupsScreen() {
 
   // Render group item
   const renderGroupItem = ({ item, isMyGroup = false }) => (
-    <View style={[styles.groupCard, { backgroundColor: navTheme.colors.card }]}>
+    <View style={[styles.groupCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={styles.groupHeader}>
-        <Text style={[styles.groupName, { color: navTheme.colors.text }]}>
+        <Text style={[styles.groupName, { color: colors.text }]}>
           {item.name}
         </Text>
-        <Text style={[styles.groupSubject, { color: navTheme.colors.text }]}>
+        <Text style={[styles.groupSubject, { color: colors.text, opacity: 0.7 }]}>
           {item.subject}
         </Text>
       </View>
       
       {item.description && (
-        <Text style={[styles.groupDescription, { color: navTheme.colors.text }]}>
+        <Text style={[styles.groupDescription, { color: colors.text, opacity: 0.8 }]}>
           {item.description}
         </Text>
       )}
       
       <View style={styles.groupFooter}>
-        <Text style={[styles.memberCount, { color: navTheme.colors.text }]}>
+        <Text style={[styles.memberCount, { color: colors.text, opacity: 0.7 }]}>
           👥 {item.members || 0} members
         </Text>
         
@@ -263,8 +258,8 @@ export default function GroupsScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: navTheme.colors.background }]}>
-        <Text style={[styles.loadingText, { color: navTheme.colors.text }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Text style={[styles.loadingText, { color: colors.text }]}>
           Loading study groups...
         </Text>
       </View>
@@ -272,27 +267,27 @@ export default function GroupsScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: navTheme.colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: navTheme.colors.text }]}>Study Groups</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Study Groups</Text>
       </View>
 
       <View style={styles.searchSection}>
         <TextInput
-          style={[styles.searchInput, { backgroundColor: navTheme.colors.card, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+          style={[styles.searchInput, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
           placeholder="Search groups..."
-          placeholderTextColor={navTheme.colors.text}
+          placeholderTextColor={colors.text + '80'}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
       </View>
 
-      <View style={[styles.tabSection, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
+      <View style={[styles.tabSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <TouchableOpacity 
           style={[styles.tab, activeTab === 'myGroups' && styles.activeTab]} 
           onPress={() => setActiveTab('myGroups')}
         >
-          <Text style={[styles.tabText, activeTab === 'myGroups' && styles.activeTabText, { color: activeTab === 'myGroups' ? '#fff' : navTheme.colors.text }]}>
+          <Text style={[styles.tabText, activeTab === 'myGroups' && styles.activeTabText, { color: activeTab === 'myGroups' ? '#fff' : colors.text }]}>
             My Groups ({filteredMyGroups.length})
           </Text>
         </TouchableOpacity>
@@ -300,7 +295,7 @@ export default function GroupsScreen() {
           style={[styles.tab, activeTab === 'available' && styles.activeTab]} 
           onPress={() => setActiveTab('available')}
         >
-          <Text style={[styles.tabText, activeTab === 'available' && styles.activeTabText, { color: activeTab === 'available' ? '#fff' : navTheme.colors.text }]}>
+          <Text style={[styles.tabText, activeTab === 'available' && styles.activeTabText, { color: activeTab === 'available' ? '#fff' : colors.text }]}>
             Available Groups ({filteredAvailableGroups.length})
           </Text>
         </TouchableOpacity>
@@ -309,9 +304,9 @@ export default function GroupsScreen() {
       {activeTab === 'myGroups' && (
         <View style={styles.contentSection}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>My Study Groups</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>My Study Groups</Text>
             <TouchableOpacity 
-              style={styles.createButton}
+              style={[styles.createButton, { backgroundColor: colors.primary }]}
               onPress={() => setShowCreateGroup(true)}
             >
               <Text style={styles.createButtonText}>+ Create Group</Text>
@@ -319,10 +314,10 @@ export default function GroupsScreen() {
           </View>
           
           {filteredMyGroups.length === 0 ? (
-            <View style={[styles.emptyState, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
+            <View style={[styles.emptyState, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Text style={styles.emptyIcon}>👥</Text>
-              <Text style={[styles.emptyTitle, { color: navTheme.colors.text }]}>No groups yet</Text>
-              <Text style={[styles.emptyText, { color: navTheme.colors.text }]}>Create your first study group or join an existing one!</Text>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>No groups yet</Text>
+              <Text style={[styles.emptyText, { color: colors.text, opacity: 0.7 }]}>Create your first study group or join an existing one!</Text>
             </View>
           ) : (
             <FlatList
@@ -338,12 +333,12 @@ export default function GroupsScreen() {
 
       {activeTab === 'available' && (
         <View style={styles.contentSection}>
-          <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>Available Groups</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Available Groups</Text>
           {filteredAvailableGroups.length === 0 ? (
-            <View style={[styles.emptyState, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
+            <View style={[styles.emptyState, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <Text style={styles.emptyIcon}>🔍</Text>
-              <Text style={[styles.emptyTitle, { color: navTheme.colors.text }]}>No groups found</Text>
-              <Text style={[styles.emptyText, { color: navTheme.colors.text }]}>Try adjusting your search or create a new group!</Text>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>No groups found</Text>
+              <Text style={[styles.emptyText, { color: colors.text, opacity: 0.7 }]}>Try adjusting your search or create a new group!</Text>
             </View>
           ) : (
             <FlatList
@@ -359,43 +354,43 @@ export default function GroupsScreen() {
 
       {showCreateGroup && (
         <View style={styles.modalOverlay}>
-          <View style={[styles.createGroupModal, { backgroundColor: navTheme.colors.card }] }>
-            <Text style={[styles.modalTitle, { color: navTheme.colors.text }]}>Create New Study Group</Text>
+          <View style={[styles.createGroupModal, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Create New Study Group</Text>
             
             <TextInput
-              style={[styles.modalInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+              style={[styles.modalInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
               placeholder="Group Name"
-              placeholderTextColor={navTheme.colors.text}
+              placeholderTextColor={colors.text + '80'}
               value={newGroupName}
               onChangeText={setNewGroupName}
             />
             
             <TextInput
-              style={[styles.modalInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+              style={[styles.modalInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
               placeholder="Subject"
-              placeholderTextColor={navTheme.colors.text}
+              placeholderTextColor={colors.text + '80'}
               value={newGroupSubject}
               onChangeText={setNewGroupSubject}
             />
 
             <TextInput
-              style={[styles.modalInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+              style={[styles.modalInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
               placeholder="Description (optional)"
-              placeholderTextColor={navTheme.colors.text}
+              placeholderTextColor={colors.text + '80'}
               value={newGroupDescription}
               onChangeText={setNewGroupDescription}
             />
             
             <View style={styles.modalActions}>
               <TouchableOpacity 
-                style={[styles.cancelButton, { backgroundColor: navTheme.colors.border }]}
+                style={[styles.cancelButton, { backgroundColor: colors.border }]}
                 onPress={() => setShowCreateGroup(false)}
               >
-                <Text style={[styles.cancelText, { color: navTheme.colors.text }]}>Cancel</Text>
+                <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={styles.confirmButton}
+                style={[styles.confirmButton, { backgroundColor: colors.primary }]}
                 onPress={createGroup}
               >
                 <Text style={styles.confirmText}>Create Group</Text>
@@ -468,10 +463,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   createButton: {
-    backgroundColor: '#A78BFA',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   createButtonText: {
     color: '#fff',
@@ -486,6 +485,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   groupHeader: {
     flexDirection: 'row',
@@ -568,6 +572,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     width: '90%',
     maxWidth: 400,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   modalTitle: {
     fontSize: 20,
@@ -598,10 +608,14 @@ const styles = StyleSheet.create({
   },
   confirmButton: {
     flex: 1,
-    backgroundColor: '#A78BFA',
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   confirmText: {
     fontSize: 16,

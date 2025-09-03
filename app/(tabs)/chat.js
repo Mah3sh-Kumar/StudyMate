@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
-import { useTheme } from '@react-navigation/native';
+import { useThemePreference } from '../../contexts/ThemeContext';
 import { getAIChatResponse } from '../../api/api';
 
 export default function ChatScreen() {
-  const navTheme = useTheme();
+  const { colors } = useThemePreference();
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -225,17 +225,17 @@ export default function ChatScreen() {
 
   return (
     <KeyboardAvoidingView 
-      style={[styles.container, { backgroundColor: navTheme.colors.background }]} 
+      style={[styles.container, { backgroundColor: colors.background }]} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: navTheme.colors.text }]}>💬 AI Chat Assistant</Text>
+        <Text style={[styles.title, { color: colors.text }]}>💬 AI Chat Assistant</Text>
         {!isAIAvailable && (
-          <View style={[styles.statusBanner, { backgroundColor: navTheme.colors.border }]}>
-            <Text style={[styles.statusText, { color: navTheme.colors.text }]}>
+          <View style={[styles.statusBanner, { backgroundColor: colors.border }]}>
+            <Text style={[styles.statusText, { color: colors.text }]}>
               ⚠️ AI Service Unavailable - Using Fallback Mode
             </Text>
-            <Text style={[styles.statusSubtext, { color: navTheme.colors.text }]}>
+            <Text style={[styles.statusSubtext, { color: colors.text }]}>
               I'll provide helpful study tips and guidance
             </Text>
           </View>
@@ -259,23 +259,23 @@ export default function ChatScreen() {
               styles.messageBubble,
               message.isUser
                 ? styles.userBubble
-                : [styles.aiBubble, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border, borderWidth: 1 }]
+                : [styles.aiBubble, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]
             ]}>
               <Text style={[
                 styles.messageText,
-                message.isUser ? styles.userText : [styles.aiText, { color: navTheme.colors.text }]
+                message.isUser ? styles.userText : [styles.aiText, { color: colors.text }]
               ]}>
                 {message.text}
               </Text>
-              <Text style={[styles.timestamp, { color: navTheme.colors.text }]}>{message.timestamp}</Text>
+              <Text style={[styles.timestamp, { color: colors.text, opacity: 0.6 }]}>{message.timestamp}</Text>
             </View>
             
             {!message.isUser && (
               <TouchableOpacity 
-                style={[styles.copyButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border, borderWidth: 1 }]}
+                style={[styles.copyButton, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}
                 onPress={() => copyMessage(message.text)}
               >
-                <Text style={[styles.copyButtonText, { color: navTheme.colors.text }]}>📋</Text>
+                <Text style={[styles.copyButtonText, { color: colors.text }]}>📋</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -283,18 +283,18 @@ export default function ChatScreen() {
         
         {isTyping && (
           <View style={[styles.messageContainer, styles.aiMessage]}>
-            <View style={[styles.messageBubble, styles.aiBubble, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border, borderWidth: 1 }]}>
-              <Text style={[styles.typingText, { color: navTheme.colors.text }]}>🤖 AI is typing...</Text>
+            <View style={[styles.messageBubble, styles.aiBubble, { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 }]}>
+              <Text style={[styles.typingText, { color: colors.text, opacity: 0.7 }]}>🤖 AI is typing...</Text>
             </View>
           </View>
         )}
       </ScrollView>
 
-      <View style={[styles.inputContainer, { backgroundColor: navTheme.colors.card, borderTopColor: navTheme.colors.border }]}>
+      <View style={[styles.inputContainer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
         <TextInput
-          style={[styles.textInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+          style={[styles.textInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
           placeholder="Ask me anything..."
-          placeholderTextColor={navTheme.colors.text}
+          placeholderTextColor={colors.text + '80'}
           value={inputText}
           onChangeText={setInputText}
           multiline
@@ -302,7 +302,7 @@ export default function ChatScreen() {
           onSubmitEditing={sendMessage}
         />
         <TouchableOpacity 
-          style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]} 
+          style={[styles.sendButton, { backgroundColor: colors.primary }, !inputText.trim() && styles.sendButtonDisabled]} 
           onPress={sendMessage}
           disabled={!inputText.trim() || isTyping}
         >
@@ -310,22 +310,22 @@ export default function ChatScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.actionButtons, { backgroundColor: navTheme.colors.card, borderTopColor: navTheme.colors.border }]}>
-        <TouchableOpacity style={[styles.actionButton, { backgroundColor: navTheme.colors.card }]} onPress={suggestQuestions}>
-          <Text style={[styles.actionButtonText, { color: navTheme.colors.text }]}>💡 Suggestions</Text>
+      <View style={[styles.actionButtons, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+        <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.background }]} onPress={suggestQuestions}>
+          <Text style={[styles.actionButtonText, { color: colors.text }]}>💡 Suggestions</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={[styles.actionButton, { backgroundColor: navTheme.colors.card }]} onPress={shareChat}>
-          <Text style={[styles.actionButtonText, { color: navTheme.colors.text }]}>📤 Share Chat</Text>
+        <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.background }]} onPress={shareChat}>
+          <Text style={[styles.actionButtonText, { color: colors.text }]}>📤 Share Chat</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={[styles.actionButton, { backgroundColor: navTheme.colors.card }]} onPress={clearChat}>
-          <Text style={[styles.actionButtonText, { color: navTheme.colors.text }]}>🗑️ Clear Chat</Text>
+        <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.background }]} onPress={clearChat}>
+          <Text style={[styles.actionButtonText, { color: colors.text }]}>🗑️ Clear Chat</Text>
         </TouchableOpacity>
         
         {!isAIAvailable && (
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: navTheme.colors.card }]} onPress={resetAIService}>
-            <Text style={[styles.actionButtonText, { color: navTheme.colors.text }]}>🔄 Reset AI</Text>
+          <TouchableOpacity style={[styles.actionButton, { backgroundColor: colors.background }]} onPress={resetAIService}>
+            <Text style={[styles.actionButtonText, { color: colors.text }]}>🔄 Reset AI</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -420,13 +420,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   sendButton: {
-    backgroundColor: '#6366F1',
     padding: 12,
     borderRadius: 20,
     marginLeft: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   sendButtonDisabled: {
     backgroundColor: '#F3F4F6',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   sendButtonText: {
     fontSize: 20,
@@ -444,8 +450,13 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   actionButtonText: {
     fontSize: 14,

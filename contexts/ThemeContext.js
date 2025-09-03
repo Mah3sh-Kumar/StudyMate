@@ -20,12 +20,12 @@ const themeColors = {
     notification: 'rgb(255, 95, 90)',
   },
   amoled: {
-    primary: 'rgb(0, 180, 255)', // brighter blue for AMOLED
-    background: 'rgb(0, 0, 0)',
-    card: 'rgb(10, 10, 12)',
-    text: 'rgb(255, 255, 255)', // pure white for best contrast
-    border: 'rgb(30, 30, 40)',
-    notification: 'rgb(255, 100, 130)',
+    primary: 'rgb(0, 200, 255)', // electric blue for AMOLED displays
+    background: 'rgb(0, 0, 0)', // pure black for OLED pixels off
+    card: 'rgb(12, 12, 12)', // very dark gray for subtle elevation
+    text: 'rgb(255, 255, 255)', // pure white for maximum contrast
+    border: 'rgb(28, 28, 28)', // dark border for subtle separation
+    notification: 'rgb(255, 110, 140)', // vivid pink for notifications
   },
 };
 
