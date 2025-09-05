@@ -151,15 +151,15 @@ const styles = StyleSheet.create({
   iconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 4,
-    borderRadius: 8,
+    padding: 2, // Reduce from 4 to 2
+    borderRadius: 6, // Reduce from 8 to 6
   },
   focusedIcon: {
-    transform: [{ scale: 1.1 }],
+    transform: [{ scale: 1.05 }], // Reduce scale from 1.1 to 1.05
   },
   iconBackground: {
-    padding: 8,
-    borderRadius: 12,
+    padding: 4, // Reduce from 8 to 4
+    borderRadius: 8, // Reduce from 12 to 8
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',

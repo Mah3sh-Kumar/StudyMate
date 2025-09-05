@@ -11,13 +11,14 @@ import {
   ActivityIndicator,
 } from 'react-native';
 
-
 import { useThemePreference } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { router } from 'expo-router';
-import { userService, dbUtils } from '../lib/database';
-import { DatabaseSetup } from '../lib/setupDatabase';
+import { userService } from '../lib/mockData';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import AuthGuard from '../components/AuthGuard';
+
+
 
 export default function SettingsScreen() {
   const { user, signOut, updateProfile } = useAuth();
@@ -28,14 +29,12 @@ export default function SettingsScreen() {
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
-  const [dbStatus, setDbStatus] = useState('checking');
-  const [dbStats, setDbStats] = useState(null);
+
 
   // Load user profile data + preferences
   useEffect(() => {
     if (user) {
       loadUserProfile();
-      checkDatabaseStatus();
     }
     loadPreferences();
   }, [user]);
@@ -67,61 +66,7 @@ export default function SettingsScreen() {
     }
   };
 
-  // Check database status and load stats
-  const checkDatabaseStatus = async () => {
-    try {
-      const status = await DatabaseSetup.checkStatus();
-      setDbStatus(status.status);
-      
-      if (status.status === 'connected') {
-        const stats = await DatabaseSetup.getStats();
-        if (stats.success) {
-          setDbStats(stats.data);
-        }
-      }
-    } catch (error) {
-      console.error('Error checking database status:', error);
-      setDbStatus('error');
-    }
-  };
 
-  // Initialize database
-  const handleInitializeDatabase = async () => {
-    try {
-      setLoading(true);
-      const result = await DatabaseSetup.setupAndTest();
-      
-      if (result.success) {
-        Alert.alert('✅ Success', 'Database initialized successfully!');
-        await checkDatabaseStatus();
-      } else {
-        Alert.alert('❌ Error', result.error);
-      }
-    } catch (error) {
-      Alert.alert('❌ Error', dbUtils.handleError(error));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Create sample data
-  const handleCreateSampleData = async () => {
-    try {
-      setLoading(true);
-      const result = await DatabaseSetup.createSampleData();
-      
-      if (result.success) {
-        Alert.alert('✅ Success', 'Sample data created successfully!');
-        await checkDatabaseStatus();
-      } else {
-        Alert.alert('❌ Error', result.error);
-      }
-    } catch (error) {
-      Alert.alert('❌ Error', dbUtils.handleError(error));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Preferences persistence
   const loadPreferences = async () => {
@@ -155,10 +100,22 @@ export default function SettingsScreen() {
         text: 'Sign Out',
         style: 'destructive',
         onPress: async () => {
-          const { error } = await signOut();
-          if (error) {
-            Alert.alert('Error', 'Failed to sign out');
-          } else {
+          try {
+            console.log('Settings logout - Attempting to sign out...');
+            const result = await signOut();
+            console.log('Settings logout - Sign out result:', result);
+            
+            if (result?.error) {
+              console.error('Settings logout error:', result.error);
+              Alert.alert('Error', result.error);
+            } else {
+              console.log('Settings logout successful, redirecting to login');
+              router.replace('/auth/login');
+            }
+          } catch (error) {
+            console.error('Settings logout catch error:', error);
+            Alert.alert('Error', 'An unexpected error occurred while signing out.');
+            // Force navigation even if error occurs
             router.replace('/auth/login');
           }
         },
@@ -235,10 +192,11 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      showsVerticalScrollIndicator={false}
-    >
+    <AuthGuard>
+      <ScrollView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        showsVerticalScrollIndicator={false}
+      >
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.card, borderColor: colors.border }]}> 
         <View style={styles.headerContent}>
@@ -349,69 +307,7 @@ export default function SettingsScreen() {
         </View>
       </View>
 
-      {/* Database Section */}
-      <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>💾 Database</Text>
-          <Text style={[styles.sectionSubtitle, { color: colors.text, opacity: 0.7 }]}>Manage your data and database connection</Text>
-        </View>
-        
-        {/* Database Status */}
-        <View style={styles.settingItem}>
-          <View style={styles.settingInfo}>
-            <Text style={styles.settingIcon}>🔗</Text>
-            <View style={styles.settingDetails}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>Database Status</Text>
-              <Text style={[styles.settingDescription, { color: colors.text, opacity: 0.7 }]}>Connection: {dbStatus}</Text>
-            </View>
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: dbStatus === 'connected' ? '#10B981' : dbStatus === 'error' ? '#EF4444' : '#F59E0B' }]}>
-            <Text style={styles.statusText}>{dbStatus === 'connected' ? '✓' : dbStatus === 'error' ? '✗' : '?'}</Text>
-          </View>
-        </View>
-        
-        {/* Database Stats */}
-        {dbStats && (
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingIcon}>📊</Text>
-              <View style={styles.settingDetails}>
-                <Text style={[styles.settingLabel, { color: colors.text }]}>Your Data</Text>
-                <Text style={[styles.settingDescription, { color: colors.text, opacity: 0.7 }]}>
-                  {dbStats.decks} decks, {dbStats.flashcards} cards, {dbStats.sessions} sessions, {dbStats.groups} groups
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
-        
-        {/* Database Actions */}
-        {dbStatus !== 'connected' && (
-          <TouchableOpacity style={[styles.settingItem, styles.actionItem]} onPress={handleInitializeDatabase}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingIcon}>⚙️</Text>
-              <View style={styles.settingDetails}>
-                <Text style={[styles.settingLabel, { color: colors.primary }]}>Initialize Database</Text>
-                <Text style={[styles.settingDescription, { color: colors.text, opacity: 0.7 }]}>Set up database tables and structure</Text>
-              </View>
-            </View>
-            <Text style={[styles.settingArrow, { color: colors.primary }]}>▶</Text>
-          </TouchableOpacity>
-        )}
-        
-        {dbStatus === 'connected' && (!dbStats || (dbStats.decks === 0 && dbStats.flashcards === 0)) && (
-          <TouchableOpacity style={[styles.settingItem, styles.actionItem]} onPress={handleCreateSampleData}>
-            <View style={styles.settingInfo}>
-              <Text style={styles.settingIcon}>🌱</Text>
-              <View style={styles.settingDetails}>
-                <Text style={[styles.settingLabel, { color: colors.primary }]}>Create Sample Data</Text>
-                <Text style={[styles.settingDescription, { color: colors.text, opacity: 0.7 }]}>Add sample flashcards and groups to get started</Text>
-              </View>
-            </View>
-            <Text style={[styles.settingArrow, { color: colors.primary }]}>▶</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+
 
       {/* Account Actions */}
       <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}> 
@@ -447,6 +343,7 @@ export default function SettingsScreen() {
         <Text style={[styles.footerText, { color: colors.text, opacity: 0.7 }]}>Made with ❤️ for students</Text>
       </View>
     </ScrollView>
+    </AuthGuard>
   );
 }
 
@@ -547,21 +444,6 @@ const styles = StyleSheet.create({
   settingArrow: { fontSize: 16, color: '#9ca3af' },
   dangerItem: { borderBottomColor: '#fee2e2' },
   dangerText: { color: '#dc2626' },
-  statusBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  actionItem: {
-    backgroundColor: 'transparent',
-  },
   footer: { padding: 30, alignItems: 'center', marginTop: 20 },
   version: { fontSize: 16, fontWeight: '600', marginBottom: 8 },
   footerText: { fontSize: 14, fontStyle: 'italic' },

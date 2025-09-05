@@ -82,6 +82,43 @@ const handleOpenAIError = (response, errorData) => {
 };
 
 /**
+ * Network-aware fetch with enhanced error handling
+ */
+const networkAwareFetch = async (url, options = {}) => {
+  try {
+    const response = await fetch(url, {
+      ...options,
+      timeout: 30000, // 30 second timeout
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      handleOpenAIError(response, errorData);
+    }
+    
+    return response;
+  } catch (error) {
+    console.error('Network fetch error:', error);
+    
+    // Handle specific network errors
+    if (error.name === 'TypeError' && (
+        error.message.includes('Failed to fetch') ||
+        error.message.includes('Network request failed') ||
+        error.message.includes('fetch')
+      )) {
+      throw new Error('Network error. Please check your internet connection and try again.');
+    }
+    
+    if (error.message.includes('timeout')) {
+      throw new Error('Request timed out. Please check your internet connection and try again.');
+    }
+    
+    // Re-throw other errors
+    throw error;
+  }
+};
+
+/**
  * Gets a response from the GPT model for the chat assistant.
  * Uses GPT-4o for best conversation quality.
  * @param {Array} messages - The conversation history.
@@ -101,7 +138,7 @@ export const getAIChatResponse = async (messages) => {
 
   const makeRequest = async () => {
     try {
-      const response = await fetch(`${API_URL}/chat/completions`, {
+      const response = await networkAwareFetch(`${API_URL}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -118,11 +155,6 @@ export const getAIChatResponse = async (messages) => {
         }),
       });
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        handleOpenAIError(response, errorData);
-      }
-      
       const data = await response.json();
       return data.choices[0].message.content;
     } catch (error) {
@@ -135,6 +167,8 @@ export const getAIChatResponse = async (messages) => {
         throw new Error("Too many requests. Please wait a moment and try again.");
       } else if (error.message.includes('authentication')) {
         throw new Error("Authentication failed. Please check your API configuration.");
+      } else if (error.message.includes('Network error')) {
+        throw new Error("Network connection failed. Please check your internet connection and try again.");
       } else {
         throw new Error("Sorry, I couldn't connect to the AI assistant right now. Please try again later.");
       }

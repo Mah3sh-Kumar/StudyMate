@@ -1,11 +1,17 @@
 // API Configuration for StudyMate
-// Copy this file to config/api-config.js and update with your actual values
+// Uses environment variables for sensitive configuration
+
+import { ENV_CONFIG, getSupabaseConfig, getOpenAIConfig } from './environment';
+
+// Get configuration from environment
+const supabaseConfig = getSupabaseConfig();
+const openaiConfig = getOpenAIConfig();
 
 export const API_CONFIG = {
   // OpenAI Configuration
   OPENAI: {
-    API_KEY: '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', // Get from https://platform.openai.com/api-keys
-    BASE_URL: 'https://api.openai.com/v1',
+    API_KEY: openaiConfig.apiKey,
+    BASE_URL: openaiConfig.baseURL,
     
     // Model-specific configurations for different tasks
     MODELS: {
@@ -58,8 +64,8 @@ export const API_CONFIG = {
 
   // Database Configuration
   DATABASE: {
-    SUPABASE_URL: 'https://oyvmxabdpcnutnrzmpgc.supabase.co', // Get from Supabase dashboard
-    SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95dm14YWJkcGNudXRucnptcGdjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0NTU1NDEsImV4cCI6MjA3MjAzMTU0MX0.cCwzpiuuufGODI3RzWeTfWqBZ45IAV-qcVqFUfaHWt8',
+    SUPABASE_URL: supabaseConfig.url,
+    SUPABASE_ANON_KEY: supabaseConfig.anonKey,
     ENABLE_REALTIME: true,
     ENABLE_AUTH: true
   },
@@ -196,20 +202,30 @@ export const validateConfig = () => {
     'DATABASE.SUPABASE_ANON_KEY'
   ];
   
-  for (const key of requiredKeys) {
+  const missing = [];
+  
+  requiredKeys.forEach(key => {
     const value = getConfig(key);
-    if (!value || value.includes('YOUR_') || value.includes('HERE')) {
-      return false;
+    if (!value || (typeof value === 'string' && (value.includes('YOUR_') || value.includes('HERE')))) {
+      missing.push(key);
     }
+  });
+  
+  if (missing.length > 0) {
+    console.error('❌ Missing or invalid configuration:', missing);
+    return false;
   }
   
+  console.log('✅ Configuration validation passed');
   return true;
 };
 
 export const getEnvironmentConfig = () => {
   return {
-    isProduction: process.env.NODE_ENV === 'production',
-    isDevelopment: process.env.NODE_ENV === 'development',
-    isTest: process.env.NODE_ENV === 'test'
+    isProduction: ENV_CONFIG.IS_PROD,
+    isDevelopment: ENV_CONFIG.IS_DEV,
+    isTest: process.env.NODE_ENV === 'test',
+    // Environment validation status
+    isConfigValid: validateConfig()
   };
 };

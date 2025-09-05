@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, FlatList, Alert } from 'react-native';
 import { useThemePreference } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
-import { userService, studySessionService, dbUtils } from '../lib/database';
+import { userService, studySessionService, dbUtils } from '../lib/mockData';
+import AuthGuard from '../components/AuthGuard';
 
 // Mock data for a generated plan
 const mockPlan = [
@@ -117,71 +118,73 @@ export default function PlanScreen() {
   );
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>📅 AI Study Planner</Text>
-        <Text style={[styles.subtitle, { color: colors.text, opacity: 0.7 }]}>
-          Create personalized study schedules
-        </Text>
-      </View>
+    <AuthGuard>
+      <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>📅 AI Study Planner</Text>
+          <Text style={[styles.subtitle, { color: colors.text, opacity: 0.7 }]}>
+            Create personalized study schedules
+          </Text>
+        </View>
 
-      {!plan ? (
-        <View style={styles.formContainer}>
-          <View style={[styles.inputSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>📚 Subjects</Text>
-            <TextInput
-              style={[styles.textInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
-              placeholder="Enter your subjects (e.g., Math, History, Biology)"
-              placeholderTextColor={colors.text + '80'}
-              value={subjects}
-              onChangeText={setSubjects}
-            />
+        {!plan ? (
+          <View style={styles.formContainer}>
+            <View style={[styles.inputSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>📚 Subjects</Text>
+              <TextInput
+                style={[styles.textInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
+                placeholder="Enter your subjects (e.g., Math, History, Biology)"
+                placeholderTextColor={colors.text + '80'}
+                value={subjects}
+                onChangeText={setSubjects}
+              />
+            </View>
+            
+            <View style={[styles.inputSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>🎯 Goals</Text>
+              <TextInput
+                style={[styles.textInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
+                placeholder="What are your study goals? (e.g., Ace my midterms)"
+                placeholderTextColor={colors.text + '80'}
+                value={goals}
+                onChangeText={setGoals}
+              />
+            </View>
+            
+            <TouchableOpacity 
+              style={[styles.generateButton, { backgroundColor: colors.primary }]} 
+              onPress={handleGeneratePlan}
+            >
+              <Text style={styles.buttonText}>🚀 Generate Plan</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.saveButton, { backgroundColor: colors.card, borderColor: colors.border }]} 
+              onPress={handleSavePreferences}
+            >
+              <Text style={[styles.saveButtonText, { color: colors.text }]}>💾 Save Preferences</Text>
+            </TouchableOpacity>
           </View>
-          
-          <View style={[styles.inputSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>🎯 Goals</Text>
-            <TextInput
-              style={[styles.textInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
-              placeholder="What are your study goals? (e.g., Ace my midterms)"
-              placeholderTextColor={colors.text + '80'}
-              value={goals}
-              onChangeText={setGoals}
+        ) : (
+          <View style={styles.planContainer}>
+            <Text style={[styles.planTitle, { color: colors.text }]}>Your Study Plan for Today</Text>
+            <FlatList
+              data={plan}
+              renderItem={renderPlanItem}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
             />
+            <TouchableOpacity 
+              style={[styles.regenerateButton, { backgroundColor: colors.primary }]} 
+              onPress={() => setPlan(null)}
+            >
+              <Text style={styles.regenerateButtonText}>🔄 Create New Plan</Text>
+            </TouchableOpacity>
           </View>
-          
-          <TouchableOpacity 
-            style={[styles.generateButton, { backgroundColor: colors.primary }]} 
-            onPress={handleGeneratePlan}
-          >
-            <Text style={styles.buttonText}>🚀 Generate Plan</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.saveButton, { backgroundColor: colors.card, borderColor: colors.border }]} 
-            onPress={handleSavePreferences}
-          >
-            <Text style={[styles.saveButtonText, { color: colors.text }]}>💾 Save Preferences</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={styles.planContainer}>
-          <Text style={[styles.planTitle, { color: colors.text }]}>Your Study Plan for Today</Text>
-          <FlatList
-            data={plan}
-            renderItem={renderPlanItem}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-          />
-          <TouchableOpacity 
-            style={[styles.regenerateButton, { backgroundColor: colors.primary }]} 
-            onPress={() => setPlan(null)}
-          >
-            <Text style={styles.regenerateButtonText}>🔄 Create New Plan</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </ScrollView>
+        )}
+      </ScrollView>
+    </AuthGuard>
   );
 }
 

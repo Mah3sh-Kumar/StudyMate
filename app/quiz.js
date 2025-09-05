@@ -221,7 +221,7 @@ export default function QuizScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>🧠 Quiz</Text>
-        <Text style={[styles.subtitle, { color: navTheme.colors.text }]}>
+        <Text style={[styles.subtitle, { color: colors.text }]}>
           Question {currentQuestion + 1} of {quiz.questions.length}
         </Text>
       </View>

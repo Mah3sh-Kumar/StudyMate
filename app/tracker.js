@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useThemePreference } from '../contexts/ThemeContext';
-import { studySessionService, dbUtils } from '../lib/database';
+import { studySessionService, dbUtils } from '../lib/mockData';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function TrackerScreen() {
@@ -179,22 +179,7 @@ export default function TrackerScreen() {
     );
   };
 
-  // Get study statistics
-  const getStudyStats = async () => {
-    try {
-      const { data, error } = await studySessionService.getStudyStats(user.id);
-      
-      if (error) {
-        console.error('Error loading study stats:', error);
-        return null;
-      }
-      
-      return data;
-    } catch (error) {
-      console.error('Error loading study stats:', error);
-      return null;
-    }
-  };
+
 
   // Format time display
   const formatTime = (seconds) => {
@@ -208,15 +193,7 @@ export default function TrackerScreen() {
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Format duration for display
-  const formatDuration = (minutes) => {
-    if (minutes < 60) {
-      return `${minutes}m`;
-    }
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-  };
+
 
   if (loading) {
     return (

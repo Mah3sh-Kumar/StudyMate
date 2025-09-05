@@ -1,186 +1,114 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { useThemePreference } from '../contexts/ThemeContext';
 import { EnhancedTabIcons } from './EnhancedTabIcons';
 
 const TAB_CONFIG = [
-  { key: 'Home', label: 'Home', icon: EnhancedTabIcons.Home },
-  { key: 'Handsfree', label: 'Handsfree', icon: EnhancedTabIcons.Handsfree },
-  { key: 'Chat', label: 'Chat', icon: EnhancedTabIcons.Chat },
-  { key: 'Groups', label: 'Groups', icon: EnhancedTabIcons.Groups },
+  { key: 'index', label: 'Home', icon: EnhancedTabIcons.Home },
+  { key: 'handsfree', label: 'Handsfree', icon: EnhancedTabIcons.Handsfree },
+  { key: 'chat', label: 'Chat', icon: EnhancedTabIcons.Chat },
+  { key: 'groups', label: 'Groups', icon: EnhancedTabIcons.Groups },
 ];
 
 export default function BottomTabBar({ state, descriptors, navigation }) {
   const { colors } = useThemePreference();
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.card, borderTopColor: colors.border }]}> 
-      {state.routes.map((route, index) => {
-        const { options } = descriptors[route.key];
-        const label = options.tabBarLabel || options.title || route.name;
-        const focused = state.index === index;
-        const IconComponent = TAB_CONFIG.find(tab => tab.key === route.name)?.icon;
-        return (
-          <TouchableOpacity
-            key={route.key}
-            accessibilityRole="button"
-            accessibilityState={focused ? { selected: true } : {}}
-            onPress={() => navigation.navigate(route.name)}
-            style={styles.tab}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.iconWrapper, focused && { backgroundColor: colors.primary }]}> 
-              {IconComponent && (
-                <IconComponent
-                  color={focused ? '#fff' : colors.text}
-                  focused={focused}
-                  size={24}
-                />
-              )}
-            </View>
-            <Text style={[styles.label, { color: focused ? '#fff' : colors.text, opacity: focused ? 1 : 0.6 }]}> 
-              {label}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    paddingBottom: 5,
-    paddingTop: 5,
-    height: 60,
-    alignItems: 'center',
-    justifyContent: 'space-around',
-  },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconWrapper: {
-    borderRadius: 16,
-    padding: 8,
-    marginBottom: 2,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-});
-
-
-
-
-
-
-
-
-/*
-
-
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { useThemePreference } from '../contexts/ThemeContext';
-import { EnhancedTabIcons } from './EnhancedTabIcons';
-
-const TAB_CONFIG = [
-  { key: 'Home', label: 'Home', icon: EnhancedTabIcons.Home },
-  { key: 'Handsfree', label: 'Handsfree', icon: EnhancedTabIcons.Handsfree },
-  { key: 'Chat', label: 'Chat', icon: EnhancedTabIcons.Chat },
-  { key: 'Groups', label: 'Groups', icon: EnhancedTabIcons.Groups },
-];
-
-export default function BottomTabBar({ state, descriptors, navigation }) {
-  const { colors } = useThemePreference();
-
-  return (
-    <View
-      style={[
-        styles.container,
-        { backgroundColor: colors.card, borderTopColor: colors.border },
-      ]}
-    >
-      {state.routes.map((route, index) => {
-        const { options } = descriptors[route.key];
-        const label = options.tabBarLabel || options.title || route.name;
-        const focused = state.index === index;
-        const IconComponent = TAB_CONFIG.find(
-          (tab) => tab.key === route.name
-        )?.icon;
-
-        return (
-          <TouchableOpacity
-            key={route.key}
-            accessibilityRole="button"
-            accessibilityState={focused ? { selected: true } : {}}
-            onPress={() => navigation.navigate(route.name)}
-            style={styles.tab}
-            activeOpacity={0.8}
-          >
-            <View
-              style={[
-                styles.iconWrapper,
-                focused && { backgroundColor: colors.primary },
-              ]}
+    <View style={[styles.container, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+      <View style={[styles.innerContainer, { backgroundColor: colors.card }]}>
+        {state.routes.map((route, index) => {
+          const { options } = descriptors[route.key];
+          const label = options.tabBarLabel || options.title || route.name;
+          const focused = state.index === index;
+          const IconComponent = TAB_CONFIG.find(tab => tab.key === route.name)?.icon;
+          
+          return (
+            <TouchableOpacity
+              key={route.key}
+              accessibilityRole="button"
+              accessibilityState={focused ? { selected: true } : {}}
+              onPress={() => navigation.navigate(route.name)}
+              style={styles.tab}
+              activeOpacity={0.7}
             >
-              {IconComponent && (
-                <IconComponent
-                  color={focused ? '#fff' : colors.text + '99'} // active=white, inactive=grayish
-                  size={24}
-                />
-              )}
-            </View>
-            <Text
-              style={[
+              <View style={[
+                styles.iconWrapper,
+                focused && { 
+                  backgroundColor: colors.primary,
+                  transform: [{ scale: 1.0 }] // Remove scale animation
+                }
+              ]}>
+                {IconComponent && (
+                  <IconComponent
+                    color={focused ? colors.card : colors.text}
+                    focused={focused}
+                  size={20} // Reduce icon size
+                  />
+                )}
+              </View>
+              <Text style={[
                 styles.label,
                 {
-                  color: focused ? colors.primary : colors.text,
-                  opacity: focused ? 1 : 0.6,
-                },
-              ]}
-            >
-              {label}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+                  color: focused ? colors.primary : colors.textSecondary,
+                  fontWeight: focused ? '700' : '500',
+                  opacity: focused ? 1 : 0.8
+                }
+              ]}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
     borderTopWidth: 1,
-    paddingBottom: 5,
-    paddingTop: 5,
-    height: 60,
+    paddingBottom: 8,
+    paddingTop: 8,
+    paddingHorizontal: 4,
+  },
+  innerContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
+    height: 50, // Reduce height from 56 to 50
+    borderRadius: 25, // Adjust border radius accordingly
+    marginHorizontal: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 6, // Reduce from 8 to 6
   },
   iconWrapper: {
-    borderRadius: 16,
-    padding: 8,
-    marginBottom: 2,
+    borderRadius: 16, // Reduce from 20 to 16
+    padding: 6, // Reduce from 10 to 6
+    marginBottom: 2, // Reduce from 4 to 2
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   label: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 10, // Reduce from 11 to 10
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
 });
-
-
-*/

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,18 +9,22 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
-import { useTheme } from '@react-navigation/native';
-import { useEffect } from 'react';
+import { useThemePreference } from '../../contexts/ThemeContext';
+import { Eye, EyeOff, Mail, Lock } from '../../components/SimpleIcons';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, resetPassword, resendVerificationEmail, user } = useAuth();
-  const navTheme = useTheme();
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState({});
+  
+  const { signIn, resetPassword, resendVerificationEmail, user, validateEmail } = useAuth();
+  const { colors } = useThemePreference();
 
   useEffect(() => {
     if (user) {
@@ -28,68 +32,115 @@ export default function LoginScreen() {
     }
   }, [user]);
 
+  const validateInputs = () => {
+    const newErrors = {};
+    
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!validateEmail(email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+    
+    if (!password.trim()) {
+      newErrors.password = 'Password is required';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (!validateInputs()) {
       return;
     }
 
     setLoading(true);
+    setErrors({});
     
     try {
       const { error } = await signIn(email.trim(), password);
 
       if (error) {
-        const normalized = (error || '').toLowerCase();
-        if (normalized.includes('email not confirmed') || normalized.includes('confirm')) {
+        const normalizedError = error.toLowerCase();
+        
+        if (normalizedError.includes('verify') || normalizedError.includes('confirm')) {
           Alert.alert(
-            'Verify your email',
-            'We sent you a verification link. Please verify your email before signing in.',
+            'Email Verification Required',
+            'Please verify your email address before signing in. Check your inbox for a verification link.',
             [
               { text: 'OK' },
               {
-                text: 'Resend link',
+                text: 'Resend Link',
                 onPress: async () => {
                   const { error: resendError } = await resendVerificationEmail(email.trim());
                   if (resendError) {
-                    Alert.alert('Could not resend', resendError);
+                    Alert.alert('Error', resendError);
                   } else {
-                    Alert.alert('Sent', 'Verification link resent. Check your inbox.');
+                    Alert.alert('Success', 'Verification link sent! Please check your email.');
                   }
                 }
               }
             ]
           );
+        } else if (normalizedError.includes('network error') || normalizedError.includes('internet connection')) {
+          setErrors({ 
+            general: `${error} Make sure you're connected to WiFi or mobile data and try again.` 
+          });
         } else {
-          Alert.alert('Login Failed', error);
+          setErrors({ general: error });
         }
       } else {
-        // Successfully logged in, navigate to main app
-        router.replace('/(tabs)');
+        // Successfully logged in - navigation will be handled by AuthContext
+        console.log('Login successful, redirecting...');
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred');
+      console.error('Login error:', error);
+      
+      // Enhanced error handling for network issues
+      if (error.message && (
+          error.message.includes('Failed to fetch') ||
+          error.message.includes('network') ||
+          error.message.includes('internet_disconnected') ||
+          error.message.includes('ERR_INTERNET_DISCONNECTED') ||
+          error.message.includes('connection')
+        )) {
+        setErrors({ 
+          general: 'Connection failed. Please check your internet connection and try again.' 
+        });
+      } else {
+        setErrors({ general: 'An unexpected error occurred. Please try again.' });
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleForgotPassword = async () => {
-    const emailToUse = email.trim();
-    if (!emailToUse) {
-      Alert.alert('Forgot Password', 'Enter your email above first.');
+    if (!email.trim()) {
+      setErrors({ email: 'Please enter your email address first' });
       return;
     }
+    
+    if (!validateEmail(email)) {
+      setErrors({ email: 'Please enter a valid email address' });
+      return;
+    }
+
     setLoading(true);
+    
     try {
-      const { error } = await resetPassword(emailToUse);
+      const { error } = await resetPassword(email.trim());
       if (error) {
         Alert.alert('Reset Failed', error);
       } else {
-        Alert.alert('Check your inbox', 'We sent a password reset link to your email.');
+        Alert.alert(
+          'Password Reset Sent', 
+          'We\'ve sent a password reset link to your email. Please check your inbox and follow the instructions.'
+        );
       }
-    } catch (_e) {
-      Alert.alert('Error', 'Unable to send reset email right now.');
+    } catch (error) {
+      console.error('Password reset error:', error);
+      Alert.alert('Error', 'Unable to send reset email right now. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -97,61 +148,150 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView 
-      style={[styles.container, { backgroundColor: navTheme.colors.background }]} 
+      style={[styles.container, { backgroundColor: colors.background }]} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContainer}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
-          <Text style={[styles.title, { color: navTheme.colors.text }]}>🎓 StudyMate</Text>
-          <Text style={[styles.subtitle, { color: navTheme.colors.text }]}>Welcome back! Sign in to continue</Text>
+          <Text style={[styles.title, { color: colors.text }]}>🎓 StudyMate</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Welcome back! Sign in to continue your learning journey</Text>
         </View>
+
+        {errors.general && (
+          <View style={[styles.errorContainer, { backgroundColor: colors.errorBackground }]}>
+            <Text style={[styles.errorText, { color: colors.error }]}>{errors.general}</Text>
+          </View>
+        )}
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <Text style={[styles.label, { color: navTheme.colors.text }]}>Email</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: navTheme.colors.card, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
-              placeholder="Enter your email"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+            <Text style={[styles.label, { color: colors.text }]}>Email</Text>
+            <View style={styles.inputWrapper}>
+              <Mail 
+                size={20} 
+                color={errors.email ? colors.error : colors.textSecondary} 
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={[
+                  styles.input, 
+                  { 
+                    backgroundColor: colors.inputBackground, 
+                    color: colors.text, 
+                    borderColor: errors.email ? colors.error : colors.border 
+                  }
+                ]}
+                placeholder="Enter your email"
+                placeholderTextColor={colors.textSecondary}
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (errors.email) {
+                    setErrors(prev => ({ ...prev, email: null }));
+                  }
+                }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                editable={!loading}
+              />
+            </View>
+            {errors.email && (
+              <Text style={[styles.fieldError, { color: colors.error }]}>{errors.email}</Text>
+            )}
           </View>
 
           <View style={styles.inputContainer}>
-            <Text style={[styles.label, { color: navTheme.colors.text }]}>Password</Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: navTheme.colors.card, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
-              placeholder="Enter your password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-            />
+            <Text style={[styles.label, { color: colors.text }]}>Password</Text>
+            <View style={styles.inputWrapper}>
+              <Lock 
+                size={20} 
+                color={errors.password ? colors.error : colors.textSecondary} 
+                style={styles.inputIcon}
+              />
+              <TextInput
+                style={[
+                  styles.input, 
+                  styles.inputWithIcon,
+                  { 
+                    backgroundColor: colors.inputBackground, 
+                    color: colors.text, 
+                    borderColor: errors.password ? colors.error : colors.border 
+                  }
+                ]}
+                placeholder="Enter your password"
+                placeholderTextColor={colors.textSecondary}
+                value={password}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  if (errors.password) {
+                    setErrors(prev => ({ ...prev, password: null }));
+                  }
+                }}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoComplete="password"
+                editable={!loading}
+              />
+              <TouchableOpacity 
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeIcon}
+                disabled={loading}
+              >
+                {showPassword ? (
+                  <EyeOff size={20} color={colors.textSecondary} />
+                ) : (
+                  <Eye size={20} color={colors.textSecondary} />
+                )}
+              </TouchableOpacity>
+            </View>
+            {errors.password && (
+              <Text style={[styles.fieldError, { color: colors.error }]}>{errors.password}</Text>
+            )}
           </View>
 
           <TouchableOpacity 
-            style={[styles.button, loading && styles.buttonDisabled]} 
+            style={[
+              styles.button, 
+              { backgroundColor: colors.primary },
+              loading && [styles.buttonDisabled, { backgroundColor: colors.disabled }]
+            ]} 
             onPress={handleLogin}
             disabled={loading}
+            activeOpacity={0.8}
           >
-            <Text style={styles.buttonText}>
-              {loading ? 'Signing In...' : 'Sign In'}
-            </Text>
+            {loading ? (
+              <View style={styles.loadingContent}>
+                <ActivityIndicator size="small" color={colors.background} />
+                <Text style={[styles.buttonText, { color: colors.background, marginLeft: 8 }]}>
+                  Signing In...
+                </Text>
+              </View>
+            ) : (
+              <Text style={[styles.buttonText, { color: colors.background }]}>Sign In</Text>
+            )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.forgotPassword} onPress={handleForgotPassword} disabled={loading}>
-            <Text style={[styles.forgotPasswordText, { color: '#6366f1' }]}>Forgot Password?</Text>
+          <TouchableOpacity 
+            style={styles.forgotPassword} 
+            onPress={handleForgotPassword} 
+            disabled={loading}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.forgotPasswordText, { color: colors.primary }]}>Forgot Password?</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: navTheme.colors.text }]}>Don't have an account? </Text>
+          <Text style={[styles.footerText, { color: colors.textSecondary }]}>Don't have an account? </Text>
           <Link href="/auth/signup" asChild>
-            <TouchableOpacity>
-              <Text style={[styles.linkText, { color: '#6366f1' }]}>Sign Up</Text>
+            <TouchableOpacity disabled={loading} activeOpacity={0.7}>
+              <Text style={[styles.linkText, { color: colors.primary }]}>Sign Up</Text>
             </TouchableOpacity>
           </Link>
         </View>
@@ -163,26 +303,35 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
     padding: 20,
+    minHeight: '100%',
   },
   header: {
     alignItems: 'center',
     marginBottom: 40,
   },
   title: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: 'bold',
-    color: '#1e293b',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  errorContainer: {
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  errorText: {
+    fontSize: 14,
+    fontWeight: '500',
     textAlign: 'center',
   },
   form: {
@@ -194,39 +343,75 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
     marginBottom: 8,
   },
+  inputWrapper: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  inputIcon: {
+    position: 'absolute',
+    left: 16,
+    zIndex: 1,
+  },
   input: {
-    backgroundColor: '#ffffff',
-    borderWidth: 1,
-    borderColor: '#d1d5db',
+    flex: 1,
+    borderWidth: 1.5,
     borderRadius: 12,
     padding: 16,
+    paddingLeft: 48,
     fontSize: 16,
-    color: '#1f2937',
+    minHeight: 56,
+  },
+  inputWithIcon: {
+    paddingRight: 48,
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 16,
+    padding: 4,
+  },
+  fieldError: {
+    fontSize: 14,
+    marginTop: 4,
+    marginLeft: 4,
   },
   button: {
-    backgroundColor: '#6366f1',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 10,
+    minHeight: 56,
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   buttonDisabled: {
-    backgroundColor: '#9ca3af',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   buttonText: {
-    color: '#ffffff',
     fontSize: 18,
     fontWeight: '600',
+  },
+  loadingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   forgotPassword: {
     alignItems: 'center',
     marginTop: 20,
+    paddingVertical: 8,
   },
   forgotPasswordText: {
-    color: '#6366f1',
     fontSize: 16,
     fontWeight: '500',
   },
@@ -234,13 +419,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 'auto',
   },
   footerText: {
-    color: '#64748b',
     fontSize: 16,
   },
   linkText: {
-    color: '#6366f1',
     fontSize: 16,
     fontWeight: '600',
   },

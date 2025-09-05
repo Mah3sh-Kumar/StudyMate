@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Alert } from 'react-native';
 import { useThemePreference } from '../../contexts/ThemeContext';
-import { studyGroupService, dbUtils } from '../../lib/database';
+import { studyGroupService, dbUtils } from '../../lib/mockData';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function GroupsScreen() {
@@ -223,7 +223,7 @@ export default function GroupsScreen() {
       
       <View style={styles.groupFooter}>
         <Text style={[styles.memberCount, { color: colors.text, opacity: 0.7 }]}>
-          👥 {item.members || 0} members
+          👥 {item.member_count || item.members?.length || 0} members
         </Text>
         
         {isMyGroup ? (

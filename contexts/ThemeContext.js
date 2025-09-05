@@ -10,6 +10,12 @@ const themeColors = {
     text: 'rgb(25, 25, 28)',
     border: 'rgb(220, 222, 225)',
     notification: 'rgb(255, 80, 85)',
+    // Authentication specific colors
+    textSecondary: 'rgb(107, 114, 128)',
+    inputBackground: 'rgb(255, 255, 255)',
+    error: 'rgb(239, 68, 68)',
+    errorBackground: 'rgba(239, 68, 68, 0.1)',
+    disabled: 'rgb(156, 163, 175)',
   },
   dark: {
     primary: 'rgb(64, 156, 255)',
@@ -18,6 +24,12 @@ const themeColors = {
     text: 'rgb(235, 235, 237)',
     border: 'rgb(50, 50, 54)',
     notification: 'rgb(255, 95, 90)',
+    // Authentication specific colors
+    textSecondary: 'rgb(156, 163, 175)',
+    inputBackground: 'rgb(31, 41, 55)',
+    error: 'rgb(248, 113, 113)',
+    errorBackground: 'rgba(248, 113, 113, 0.1)',
+    disabled: 'rgb(107, 114, 128)',
   },
   amoled: {
     primary: 'rgb(0, 200, 255)', // electric blue for AMOLED displays
@@ -26,6 +38,12 @@ const themeColors = {
     text: 'rgb(255, 255, 255)', // pure white for maximum contrast
     border: 'rgb(28, 28, 28)', // dark border for subtle separation
     notification: 'rgb(255, 110, 140)', // vivid pink for notifications
+    // Authentication specific colors
+    textSecondary: 'rgb(163, 163, 163)',
+    inputBackground: 'rgb(18, 18, 18)',
+    error: 'rgb(255, 102, 102)',
+    errorBackground: 'rgba(255, 102, 102, 0.1)',
+    disabled: 'rgb(82, 82, 82)',
   },
 };
 
@@ -38,10 +56,13 @@ export function ThemeProviderCustom({ children }) {
 
   useEffect(() => {
     (async () => {
+      console.log('🎨 Initializing theme...');
       try {
         const stored = await AsyncStorage.getItem('studymate_theme');
+        console.log('🎨 Stored theme:', stored);
         if (['light', 'dark', 'amoled'].includes(stored)) setTheme(stored);
       } catch {}
+      console.log('✅ Theme initialization complete');
       setReady(true);
     })();
   }, []);

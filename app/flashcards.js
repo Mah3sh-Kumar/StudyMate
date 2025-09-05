@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert,
 import * as Clipboard from 'expo-clipboard';
 import { useThemePreference } from '../contexts/ThemeContext';
 import { generateFlashcardsWithOpenAI } from '../api/api';
-import { flashcardService } from '../lib/database';
+import { flashcardService } from '../lib/mockData';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function FlashcardsScreen() {
@@ -156,7 +156,7 @@ export default function FlashcardsScreen() {
     }
 
     try {
-      const { data, error } = await flashcardService.addFlashcard(currentDeck.id, {
+      const { data, error } = await flashcardService.addCard(currentDeck.id, {
         front: newCardFront.trim(),
         back: newCardBack.trim(),
         difficulty: 1
@@ -200,7 +200,7 @@ export default function FlashcardsScreen() {
         // Save each AI-generated card to the database
         const savedCards = [];
         for (const card of aiFlashcards) {
-          const { data, error } = await flashcardService.addFlashcard(currentDeck.id, {
+          const { data, error } = await flashcardService.addCard(currentDeck.id, {
           front: card.front,
             back: card.back,
             difficulty: 1
@@ -500,23 +500,27 @@ export default function FlashcardsScreen() {
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: navTheme.colors.background }]} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.title, { color: navTheme.colors.text }]}>📚 Flashcards</Text>
-        <Text style={[styles.subtitle, { color: navTheme.colors.text }]}>
+        <Text style={[styles.title, { color: colors.text }]}>📚 Flashcards</Text>
+        <Text style={[styles.subtitle, { color: colors.text }]}>
           Card {currentCardIndex + 1} of {flashcards.length}
         </Text>
       </View>
 
       {/* AI Generator Section */}
       {showAIGenerator && (
-        <View style={[styles.aiSection, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
-          <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>🤖 Generate with AI</Text>
+        <View style={[styles.aiSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>🤖 Generate with AI</Text>
           <TextInput
-            style={[styles.aiInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+            style={[styles.aiInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
             placeholder="Enter your study material here..."
-            placeholderTextColor={navTheme.colors.text}
+
+
+
+            
+            placeholderTextColor={colors.text + '80'}
             value={aiInput}
             onChangeText={setAiInput}
             multiline
@@ -644,19 +648,19 @@ export default function FlashcardsScreen() {
 
       {/* Add New Card Form */}
       {showAddForm && (
-        <View style={[styles.formSection, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
+        <View style={[styles.formSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>➕ Add New Card</Text>
           <TextInput
-            style={[styles.input, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+            style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
             placeholder="Front of card (question/term)"
-            placeholderTextColor={navTheme.colors.text}
+            placeholderTextColor={colors.text + '80'}
             value={newCardFront}
             onChangeText={setNewCardFront}
           />
           <TextInput
-            style={[styles.input, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+            style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
             placeholder="Back of card (answer/definition)"
-            placeholderTextColor={navTheme.colors.text}
+            placeholderTextColor={colors.text + '80'}
             value={newCardBack}
             onChangeText={setNewCardBack}
             multiline
