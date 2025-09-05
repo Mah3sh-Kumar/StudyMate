@@ -5,7 +5,7 @@ This document tracks all fixes and improvements made to StudyMate, including pro
 
 ## Timestamp
 **Fix Session Started:** 2025-01-04
-**Latest Update:** 2025-01-04 - Metro bundler error fix and project cleanup
+**Latest Update:** 2025-09-05 - Asset creation and authentication login fix
 
 ---
 
@@ -198,6 +198,51 @@ This document tracks all fixes and improvements made to StudyMate, including pro
 - Better success messaging
 - Consistent navigation handling
 - Enhanced logging for debugging
+
+### 9. Missing Asset Files Fix
+**Files:** `assets/images/` (NEW DIRECTORY), `hooks/useColorScheme.ts` (NEW)
+**Issue:** Android bundling failed due to missing adaptive icon and useColorScheme hook
+**Fix Applied:** Created required asset files and missing hook implementation
+**Status:** ✅ FIXED
+
+**Details:**
+- Created `assets/images/` directory with required image files:
+  - `adaptive-icon.png` (512x512) - Android adaptive icon
+  - `icon.png` (1024x1024) - Main app icon
+  - `favicon.png` (64x64) - Web favicon
+  - `splash-icon.png` (200x200) - Splash screen icon
+- Created missing `hooks/useColorScheme.ts` to resolve import error
+- All images are placeholder blue backgrounds with "SM" text
+- Resolved Metro bundler compilation errors for Android builds
+
+### 10. Authentication Mock Data Enhancement
+**File:** `lib/mockData.js`
+**Issue:** User login failing because email not found in mock data
+**Fix Applied:** Added user's email to mock authentication data
+**Status:** ✅ FIXED
+
+**Details:**
+- Added `krishnarai4657@gmail.com` to mockUsers array
+- User ID: `user-4`
+- Password: `password123`
+- Full profile with Computer Science focus
+- Can now successfully authenticate with existing credentials
+- Maintains all existing authentication functionality
+
+### 11. Missing UserService Methods Fix
+**File:** `lib/mockData.js`
+**Issue:** Settings screen failing because userService.getProfile method was missing
+**Fix Applied:** Added missing getProfile and updateProfile methods to userService
+**Status:** ✅ FIXED
+
+**Details:**
+- Added `getProfile(userId)` method to retrieve user profile data
+- Added `updateProfile(userId, updates)` method to update user profiles
+- Both methods integrate with existing mockUsers data structure
+- Maintains compatibility with settings screen and other components
+- Includes proper error handling and operation logging
+- Supports profile updates for full_name, username, email, subjects, goals, and preferences
+- Resolves "userService.getProfile is not a function" error
 
 ### 9. Flashcard Service Import Error
 **Files:** `app/flashcards.js`, `lib/flashcardService.js` (NEW)
