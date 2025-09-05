@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, Animated } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  ScrollView, 
+  TextInput, 
+  Alert, 
+  Animated, 
+  KeyboardAvoidingView, 
+  Platform,
+  Dimensions
+} from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useThemePreference } from '../contexts/ThemeContext';
 import { generateFlashcardsWithOpenAI } from '../api/api';
@@ -28,6 +40,8 @@ export default function FlashcardsScreen() {
   const [newDeckName, setNewDeckName] = useState('');
   const [newDeckDescription, setNewDeckDescription] = useState('');
   const [newDeckSubject, setNewDeckSubject] = useState('');
+  const [deckCreating, setDeckCreating] = useState(false);
+  const [cardAdding, setCardAdding] = useState(false);
 
   // Load user's decks on component mount
   useEffect(() => {
@@ -109,12 +123,25 @@ export default function FlashcardsScreen() {
 
   // Create new deck
   const createDeck = async () => {
+    // Enhanced validation
     if (!newDeckName.trim()) {
-      Alert.alert('❌ Error', 'Please enter a deck name');
+      Alert.alert('❌ Validation Error', 'Please enter a deck name');
+      return;
+    }
+
+    if (newDeckName.trim().length < 3) {
+      Alert.alert('❌ Validation Error', 'Deck name must be at least 3 characters long');
+      return;
+    }
+
+    if (newDeckName.trim().length > 50) {
+      Alert.alert('❌ Validation Error', 'Deck name must be less than 50 characters');
       return;
     }
 
     try {
+      setDeckCreating(true);
+      
       const { data, error } = await flashcardService.createDeck(user.id, {
         name: newDeckName.trim(),
         description: newDeckDescription.trim(),
@@ -123,7 +150,7 @@ export default function FlashcardsScreen() {
       });
       
       if (error) {
-        Alert.alert('❌ Error', 'Failed to create deck');
+        Alert.alert('❌ Error', 'Failed to create deck: ' + error.message);
         return;
       }
       
@@ -136,10 +163,12 @@ export default function FlashcardsScreen() {
       setFlashcards([]);
       setCurrentCardIndex(0);
       
-      Alert.alert('✅ Success', 'Deck created successfully!');
+      Alert.alert('✅ Success', `Deck "${data.name}" created successfully!`);
     } catch (error) {
       console.error('Error creating deck:', error);
-      Alert.alert('❌ Error', 'Failed to create deck');
+      Alert.alert('❌ Error', 'An unexpected error occurred while creating the deck');
+    } finally {
+      setDeckCreating(false);
     }
   };
 
@@ -150,12 +179,35 @@ export default function FlashcardsScreen() {
       return;
     }
 
+    // Enhanced validation
     if (!newCardFront.trim() || !newCardBack.trim()) {
-      Alert.alert('❌ Error', 'Please fill in both front and back of the card');
+      Alert.alert('❌ Validation Error', 'Please fill in both front and back of the card');
+      return;
+    }
+
+    if (newCardFront.trim().length < 5) {
+      Alert.alert('❌ Validation Error', 'Question must be at least 5 characters long');
+      return;
+    }
+
+    if (newCardBack.trim().length < 2) {
+      Alert.alert('❌ Validation Error', 'Answer must be at least 2 characters long');
+      return;
+    }
+
+    if (newCardFront.trim().length > 500) {
+      Alert.alert('❌ Validation Error', 'Question must be less than 500 characters');
+      return;
+    }
+
+    if (newCardBack.trim().length > 1000) {
+      Alert.alert('❌ Validation Error', 'Answer must be less than 1000 characters');
       return;
     }
 
     try {
+      setCardAdding(true);
+      
       const { data, error } = await flashcardService.addCard(currentDeck.id, {
         front: newCardFront.trim(),
         back: newCardBack.trim(),
@@ -163,7 +215,7 @@ export default function FlashcardsScreen() {
       });
       
       if (error) {
-        Alert.alert('❌ Error', 'Failed to add flashcard');
+        Alert.alert('❌ Error', 'Failed to add flashcard: ' + error.message);
         return;
       }
       
@@ -175,7 +227,9 @@ export default function FlashcardsScreen() {
       Alert.alert('✅ Success', 'Flashcard added successfully!');
     } catch (error) {
       console.error('Error adding card:', error);
-      Alert.alert('❌ Error', 'Failed to add flashcard');
+      Alert.alert('❌ Error', 'An unexpected error occurred while adding the card');
+    } finally {
+      setCardAdding(false);
     }
   };
 
@@ -393,7 +447,17 @@ export default function FlashcardsScreen() {
   // Show empty state when no flashcards exist
   if (!flashcards || flashcards.length === 0) {
     return (
-      <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        <ScrollView 
+          style={[styles.container, { backgroundColor: colors.background }]} 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
         {/* Header */}
         <View style={styles.header}>
           <Text style={[styles.title, { color: colors.text }]}>📚 Flashcards</Text>
@@ -496,11 +560,21 @@ export default function FlashcardsScreen() {
           </View>
         )}
       </ScrollView>
-    );
-  }
+    </KeyboardAvoidingView>
+  );
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+    >
+      <ScrollView 
+        style={[styles.container, { backgroundColor: colors.background }]} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
       {/* Header */}
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>📚 Flashcards</Text>
@@ -646,37 +720,195 @@ export default function FlashcardsScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* AI Generator Section */}
+      {showAIGenerator && (
+        <View style={[styles.aiSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>🤖 Generate with AI</Text>
+          <TextInput
+            style={[styles.aiInput, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
+            placeholder="Enter your study material here..."
+            placeholderTextColor={colors.text + '80'}
+            value={aiInput}
+            onChangeText={setAiInput}
+            multiline
+            numberOfLines={4}
+          />
+          <View style={styles.aiButtons}>
+            <TouchableOpacity 
+              style={[styles.button, styles.generateButton, { backgroundColor: colors.primary }]} 
+              onPress={generateWithAI}
+              disabled={isGenerating}
+            >
+              <Text style={styles.buttonText}>
+                {isGenerating ? '🔄 Generating...' : '🚀 Generate Cards'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.button, styles.cancelButton, { backgroundColor: colors.notification }]} 
+              onPress={() => setShowAIGenerator(false)}
+            >
+              <Text style={styles.buttonText}>❌ Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {/* Add New Card Form */}
       {showAddForm && (
         <View style={[styles.formSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>➕ Add New Card</Text>
           <TextInput
             style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
-            placeholder="Front of card (question/term)"
+            placeholder="Question (front of card)"
             placeholderTextColor={colors.text + '80'}
             value={newCardFront}
             onChangeText={setNewCardFront}
+            multiline
+            numberOfLines={3}
+            maxLength={500}
           />
           <TextInput
             style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
-            placeholder="Back of card (answer/definition)"
+            placeholder="Answer (back of card)"
             placeholderTextColor={colors.text + '80'}
             value={newCardBack}
             onChangeText={setNewCardBack}
             multiline
             numberOfLines={3}
+            maxLength={1000}
           />
           <View style={styles.formButtons}>
-            <TouchableOpacity style={[styles.button, styles.saveButton, { backgroundColor: colors.primary }]} onPress={addCard}>
-              <Text style={styles.buttonText}>💾 Save Card</Text>
+            <TouchableOpacity 
+              style={[styles.button, styles.saveButton, { backgroundColor: colors.primary, opacity: cardAdding ? 0.6 : 1 }]} 
+              onPress={addCard}
+              disabled={cardAdding}
+            >
+              <Text style={styles.buttonText}>
+                {cardAdding ? '🔄 Saving...' : '💾 Save Card'}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.cancelButton, { backgroundColor: colors.notification }]} onPress={() => setShowAddForm(false)}>
+            <TouchableOpacity 
+              style={[styles.button, styles.cancelButton, { backgroundColor: colors.notification }]} 
+              onPress={() => setShowAddForm(false)}
+              disabled={cardAdding}
+            >
+              <Text style={styles.buttonText}>❌ Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Deck Management Buttons */}
+      <View style={styles.actionButtons}>
+        <TouchableOpacity 
+          style={[styles.button, styles.addButton, { backgroundColor: colors.card, borderColor: colors.border }]} 
+          onPress={() => setShowDeckSelector(true)}
+        >
+          <Text style={[styles.buttonText, { color: colors.text }]}>📚 New Deck</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.button, styles.exportButton, { backgroundColor: colors.card, borderColor: colors.border }]} 
+          onPress={exportCards}
+        >
+          <Text style={[styles.buttonText, { color: colors.text }]}>📋 Export</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Deck Selector */}
+      {showDeckSelector && (
+        <View style={[styles.formSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>📚 Manage Decks</Text>
+          
+          {/* Current Deck Info */}
+          {currentDeck && (
+            <View style={styles.currentDeckInfo}>
+              <Text style={[styles.currentDeckName, { color: colors.text }]}>
+                Current: {currentDeck.name}
+              </Text>
+              <Text style={[styles.currentDeckDetails, { color: colors.text, opacity: 0.7 }]}>
+                {currentDeck.subject} • {flashcards.length} cards
+              </Text>
+            </View>
+          )}
+          
+          {/* Deck List */}
+          <Text style={[styles.deckListTitle, { color: colors.text }]}>Switch Deck:</Text>
+          {decks.map(deck => (
+            <TouchableOpacity 
+              key={deck.id}
+              style={[
+                styles.deckItem, 
+                { backgroundColor: colors.background, borderColor: colors.border },
+                currentDeck?.id === deck.id && styles.currentDeckItem
+              ]}
+              onPress={async () => {
+                setCurrentDeck(deck);
+                await loadDeckCards(deck.id);
+                setShowDeckSelector(false);
+              }}
+            >
+              <Text style={[styles.deckName, { color: colors.text }]}>{deck.name}</Text>
+              <Text style={[styles.deckDetails, { color: colors.text, opacity: 0.7 }]}>
+                {deck.subject} • {deck.total_cards || 0} cards
+              </Text>
+              <TouchableOpacity 
+                style={styles.deleteDeckButton}
+                onPress={() => deleteDeck(deck.id)}
+              >
+                <Text style={styles.deleteDeckText}>🗑️</Text>
+              </TouchableOpacity>
+            </TouchableOpacity>
+          ))}
+          
+          {/* Create New Deck Form */}
+          <Text style={[styles.sectionTitle, { color: colors.text, marginTop: 20 }]}>➕ Create New Deck</Text>
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
+            placeholder="Deck name (e.g., Math Formulas)"
+            placeholderTextColor={colors.text + '80'}
+            value={newDeckName}
+            onChangeText={setNewDeckName}
+            maxLength={50}
+          />
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
+            placeholder="Description (optional)"
+            placeholderTextColor={colors.text + '80'}
+            value={newDeckDescription}
+            onChangeText={setNewDeckDescription}
+            maxLength={200}
+          />
+          <TextInput
+            style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.border }]}
+            placeholder="Subject (e.g., Mathematics)"
+            placeholderTextColor={colors.text + '80'}
+            value={newDeckSubject}
+            onChangeText={setNewDeckSubject}
+            maxLength={50}
+          />
+          <View style={styles.formButtons}>
+            <TouchableOpacity 
+              style={[styles.button, styles.saveButton, { backgroundColor: colors.primary, opacity: deckCreating ? 0.6 : 1 }]} 
+              onPress={createDeck}
+              disabled={deckCreating}
+            >
+              <Text style={styles.buttonText}>
+                {deckCreating ? '🔄 Creating...' : '💾 Create Deck'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.button, styles.cancelButton, { backgroundColor: colors.notification }]} 
+              onPress={() => setShowDeckSelector(false)}
+              disabled={deckCreating}
+            >
               <Text style={styles.buttonText}>❌ Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
       )}
     </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -930,4 +1162,57 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 100,
   },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
+  },
+  currentDeckInfo: {
+    marginBottom: 20,
+    padding: 15,
+    borderRadius: 12,
+    backgroundColor: 'rgba(102, 102, 255, 0.1)',
+  },
+  currentDeckName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  currentDeckDetails: {
+    fontSize: 14,
+  },
+  deckListTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 10,
+    marginTop: 10,
+  },
+  deckItem: {
+    padding: 15,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  currentDeckItem: {
+    backgroundColor: 'rgba(102, 102, 255, 0.2)',
+  },
+  deckName: {
+    fontSize: 16,
+    fontWeight: '600',
+    flex: 1,
+  },
+  deckDetails: {
+    fontSize: 12,
+    flex: 2,
+    textAlign: 'right',
+  },
+  deleteDeckButton: {
+    padding: 8,
+  },
+  deleteDeckText: {
+    fontSize: 16,
+  },
 });
+}
