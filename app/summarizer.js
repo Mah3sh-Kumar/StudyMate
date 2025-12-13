@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '@react-navigation/native';
 import { summarizeTextWithOpenAI } from '../api/api';
 
@@ -43,7 +44,6 @@ export default function SummarizerScreen() {
 
   const copyToClipboard = async () => {
     try {
-      const { Clipboard } = await import('expo-clipboard');
       await Clipboard.setStringAsync(summary);
       Alert.alert('Success', 'Summary copied to clipboard!');
     } catch (error) {

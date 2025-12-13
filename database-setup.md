@@ -39,18 +39,19 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 1. Users Table
-CREATE TABLE users (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email VARCHAR(255) UNIQUE NOT NULL,
-  username VARCHAR(100) UNIQUE NOT NULL,
+-- 1. Profiles Table
+-- User profiles linked to Supabase auth.users
+CREATE TABLE profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name VARCHAR(255),
+  username VARCHAR(100) UNIQUE,
+  email VARCHAR(255),
   avatar_url TEXT,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW(),
-  last_login TIMESTAMP,
+  study_subjects TEXT[],
+  study_goals TEXT[],
   preferences JSONB DEFAULT '{}',
-  is_active BOOLEAN DEFAULT true
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
 );
 
 -- 2. Study Groups Table
@@ -60,7 +61,7 @@ CREATE TABLE study_groups (
   description TEXT,
   subject VARCHAR(100),
   max_members INTEGER DEFAULT 50,
-  created_by UUID REFERENCES users(id),
+  created_by UUID REFERENCES profiles(id),
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
   is_public BOOLEAN DEFAULT true,
@@ -71,7 +72,7 @@ CREATE TABLE study_groups (
 CREATE TABLE group_members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id UUID REFERENCES study_groups(id) ON DELETE CASCADE,
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   role VARCHAR(50) DEFAULT 'member',
   joined_at TIMESTAMP DEFAULT NOW(),
   last_active TIMESTAMP DEFAULT NOW(),
@@ -81,7 +82,7 @@ CREATE TABLE group_members (
 -- 4. Study Sessions Table
 CREATE TABLE study_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   subject VARCHAR(100) NOT NULL,
   start_time TIMESTAMP NOT NULL,
   end_time TIMESTAMP,
@@ -94,7 +95,7 @@ CREATE TABLE study_sessions (
 -- 5. Flashcard Decks Table
 CREATE TABLE flashcard_decks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
   description TEXT,
   subject VARCHAR(100),
@@ -120,7 +121,7 @@ CREATE TABLE flashcards (
 -- 7. Study Materials Table
 CREATE TABLE study_materials (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   title VARCHAR(255) NOT NULL,
   content TEXT,
   file_url TEXT,
@@ -134,7 +135,7 @@ CREATE TABLE study_materials (
 -- 8. AI Generated Content Table
 CREATE TABLE ai_generated_content (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   content_type VARCHAR(50) NOT NULL,
   original_text TEXT,
   generated_content JSONB,
@@ -147,7 +148,7 @@ CREATE TABLE ai_generated_content (
 CREATE TABLE group_messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   group_id UUID REFERENCES study_groups(id) ON DELETE CASCADE,
-  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
   message TEXT NOT NULL,
   message_type VARCHAR(50) DEFAULT 'text',
   file_url TEXT,
@@ -156,8 +157,8 @@ CREATE TABLE group_messages (
 );
 
 -- Create indexes for better performance
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_profiles_email ON profiles(email);
+CREATE INDEX idx_profiles_username ON profiles(username);
 CREATE INDEX idx_study_groups_subject ON study_groups(subject);
 CREATE INDEX idx_study_sessions_user_subject ON study_sessions(user_id, subject);
 CREATE INDEX idx_flashcards_deck ON flashcards(deck_id);
@@ -185,11 +186,14 @@ ALTER TABLE group_messages ENABLE ROW LEVEL SECURITY;
 
 ```sql
 -- Users can only see their own profile
-CREATE POLICY "Users can view own profile" ON users
+CREATE POLICY "Users can view own profile" ON profiles
   FOR SELECT USING (auth.uid() = id);
 
-CREATE POLICY "Users can update own profile" ON users
+CREATE POLICY "Users can update own profile" ON profiles
   FOR UPDATE USING (auth.uid() = id);
+
+CREATE POLICY "Users can insert own profile" ON profiles
+  FOR INSERT WITH CHECK (auth.uid() = id);
 
 -- Study groups policies
 CREATE POLICY "Anyone can view public groups" ON study_groups

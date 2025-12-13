@@ -203,10 +203,10 @@ export default function TrackerScreen() {
         return sessions.filter(s => s.start_time?.split('T')[0] === today);
       case 'week':
         const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        return sessions.filter(s => new Date(s.start_time) >= weekAgo);
+        return sessions.filter(s => s.start_time && new Date(s.start_time) >= weekAgo);
       case 'month':
         const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-        return sessions.filter(s => new Date(s.start_time) >= monthAgo);
+        return sessions.filter(s => s.start_time && new Date(s.start_time) >= monthAgo);
       default:
         return sessions;
     }
