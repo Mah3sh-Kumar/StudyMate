@@ -183,7 +183,11 @@ CREATE POLICY "Users can create groups" ON study_groups FOR INSERT WITH CHECK (a
 
 -- Group members policies
 CREATE POLICY "Members can view group members" ON group_members FOR SELECT USING (
-  EXISTS (SELECT 1 FROM group_members gm WHERE gm.group_id = group_members.group_id AND gm.user_id = auth.uid())
+  group_members.group_id IN (
+    SELECT gm_check.group_id 
+    FROM group_members gm_check 
+    WHERE gm_check.user_id = auth.uid()
+  )
 );
 CREATE POLICY "Users can join public groups" ON group_members FOR INSERT WITH CHECK (
   EXISTS (SELECT 1 FROM study_groups WHERE id = group_members.group_id AND is_public = true)

@@ -205,7 +205,7 @@ export const summarizeTextWithOpenAI = async (textToSummarize) => {
 };
 
 /**
- * Generates a multiple-choice quiz from a given text.
+ * Generates a multiple-choise asnwers from the give question.
  * Uses GPT-3.5-turbo-1106 for reliable JSON output.
  * @param {string} contextText - The text to base the quiz on.
  * @returns {Promise<Object>} A quiz object with questions array.
