@@ -242,4 +242,3 @@ This project is licensed under the MIT License.
 - [ ] Multi-language support (i18n)
 - [ ] Collaborative real-time study sessions
 - [ ] Gamification features and achievement system
-- [ ] Mobile app deployment (iOS & Android)
