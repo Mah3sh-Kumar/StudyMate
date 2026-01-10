@@ -132,14 +132,28 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     // Load initial user
-    supabase.auth.getSession().then(({ data }) => {
-      setUser(data.session?.user ?? null);
+    supabase.auth.getSession().then(async ({ data }) => {
+      const currentUser = data.session?.user ?? null;
+      setUser(currentUser);
+      
+      // Check if user has a profile and create one if missing
+      if (currentUser) {
+        await ensureProfileExists(currentUser);
+      }
+      
       setLoading(false);
     });
 
     // Listen for changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      
+      // Check if user has a profile and create one if missing
+      if (currentUser) {
+        await ensureProfileExists(currentUser);
+      }
+      
       setLoading(false);
     });
 
@@ -236,6 +250,44 @@ export function AuthProvider({ children }) {
   const resendVerificationEmail = async (email) => {
     const { error } = await supabase.auth.resend({ type: 'signup', email });
     return { error: error?.message };
+  };
+
+  // Ensure profile exists for user
+  const ensureProfileExists = async (user) => {
+    if (!user) return;
+    
+    try {
+      // Check if profile exists
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle();
+      
+      if (!profile && !error) {
+        // Profile doesn't exist, create it from auth metadata
+        const fullName = user.user_metadata?.full_name || '';
+        const username = user.user_metadata?.username || '';
+        const email = user.email || '';
+        
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: email,
+            full_name: fullName,
+            username: username,
+          });
+        
+        if (insertError) {
+          console.warn('Auto-profile creation failed:', insertError);
+        } else {
+          console.log('Profile created automatically for user:', user.id);
+        }
+      }
+    } catch (error) {
+      console.warn('Error in ensureProfileExists:', error);
+    }
   };
 
   const updateProfile = async (updates) => {

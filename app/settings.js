@@ -50,9 +50,30 @@ export default function SettingsScreen() {
       const { data, error } = await userService.getProfile(user.id);
 
       if (error) {
-        console.warn('Profile not found in DB, fallback to auth metadata.');
-        setFullName(user?.user_metadata?.full_name || '');
-        setUsername(user?.user_metadata?.username || '');
+        console.log('Profile not found in DB, creating from auth metadata...');
+        
+        // Try to create a profile from auth metadata if it doesn't exist
+        const fullNameFromAuth = user?.user_metadata?.full_name || '';
+        const usernameFromAuth = user?.user_metadata?.username || '';
+        
+        // Set the UI values from auth metadata
+        setFullName(fullNameFromAuth);
+        setUsername(usernameFromAuth);
+        
+        // Create the profile in the database if it doesn't exist
+        if (user && (fullNameFromAuth || usernameFromAuth)) {
+          const { error: dbError } = await userService.updateProfile(user.id, {
+            full_name: fullNameFromAuth,
+            username: usernameFromAuth,
+            email: user.email,
+          });
+          
+          if (dbError) {
+            console.warn('Created profile from auth metadata, but DB sync failed:', dbError);
+          } else {
+            console.log('Profile created from auth metadata successfully');
+          }
+        }
       } else if (data) {
         setFullName(data.full_name || '');
         setUsername(data.username || '');
