@@ -1,244 +1,297 @@
-# StudyMate
 
-**AI-Powered Study Assistant**
+<div align="center">
 
-StudyMate is a modern React Native application that leverages artificial intelligence to enhance the learning experience. Built with Expo and powered by OpenAI, StudyMate provides intelligent tools for content summarization, quiz generation, flashcard creation, and learning progress tracking.
+# 📚 StudyMate
 
----
+### AI-Powered Study Assistant
 
-## Features
+**Supercharge Your Learning with Intelligent Tools**
 
-### AI-Powered Tools
-- **AI Summarizer** - Transform lengthy notes into concise, actionable summaries
-- **AI Quiz Generator** - Create comprehensive multiple-choice quizzes from study materials
-- **AI Flashcard Creator** - Automatically generate interactive flashcards from content
-- **AI Chat Assistant** - Interactive chatbot for study help and explanations
+A modern, cross-platform mobile application that leverages AI to deliver intelligent content summarization, quiz generation, flashcards, and personalized learning schedules.
 
-### Study Management
-- **Study Planner** - Generate personalized study schedules based on learning goals
-- **Hands-Free Mode** - Voice-controlled interface for hands-free study sessions
-- **Time Tracker** - Monitor study sessions with detailed analytics and progress visualization
+[Features](#-features) • [Architecture](#-architecture) • [Getting Started](#-getting-started) • [Tech Stack](#-tech-stack) • [Contributing](#-contributing)
 
-### Collaboration
-- **Study Groups** - Create and join study groups, share materials, and collaborate with peers
-- **Progress Analytics** - Comprehensive insights into study habits and performance metrics
+</div>
 
 ---
 
-## Getting Started
+## 📋 Table of Contents
+
+- [Overview](#-overview)
+- [Features](#-features)
+- [Architecture](#-architecture)
+- [Getting Started](#-getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Configuration](#configuration)
+  - [Running the Application](#running-the-application)
+- [Usage](#-usage)
+  - [Import Study Material](#import-study-material)
+  - [Study Mode](#study-mode)
+  - [Hands-Free Voice Commands](#hands-free-voice-commands)
+- [Tech Stack](#-tech-stack)
+  - [Frontend](#frontend)
+  - [Backend](#backend)
+  - [AI](#ai)
+- [Project Structure](#-project-structure)
+- [Troubleshooting](#-troubleshooting)
+  - [API Key Invalid](#api-key-invalid)
+  - [Android Emulator Crash](#android-emulator-crash)
+  - [Supabase Data Not Saving](#supabase-data-not-saving)
+- [Contributing](#-contributing)
+- [License](#-license)
+
+---
+
+## 🔍 Overview
+
+**StudyMate** is an intelligent educational companion designed to transform passive study into active learning.
+
+By combining advanced AI models with a mobile-first interface, StudyMate enables students to understand faster, revise smarter, and retain knowledge more effectively.
+
+Key capabilities include:
+
+- **Intelligent Processing** – AI-powered summarization and content analysis
+- **Cloud Synchronization** – Secure multi-device data persistence via Supabase
+- **Adaptive Learning** – Personalized schedules, quizzes, and progress tracking
+
+---
+
+## ✨ Features
+
+### 🧠 AI-Powered Tools
+
+- **Smart Summarizer**Convert long notes, PDFs, and textbooks into concise, exam-oriented summaries.
+- **Quiz Generator**Automatically generate structured multiple-choice quizzes from study material.
+- **Flashcard Creator**Create interactive flashcards optimized for active recall and spaced repetition.
+- **AI Chat Assistant**
+  Context-aware conversational assistant for instant explanations and doubt solving.
+
+---
+
+### ⚡ Productivity & Study Management
+
+- **Study Planner**Auto-generate personalized study schedules based on goals and deadlines.
+- **Hands-Free Mode**Voice-controlled studying using speech-to-text and text-to-speech.
+- **Time Tracker**
+  Focus timers (Pomodoro) with analytics on productivity and consistency.
+
+---
+
+### 👥 Collaboration & Analytics
+
+- **Study Groups**Share quizzes, flashcards, and notes with peers in real time.
+- **Performance Metrics**Visual insights into quiz scores, topic mastery, and study streaks.
+- **Leaderboards**
+  Gamified learning to increase motivation and consistency.
+
+---
+
+## 🏗 Architecture
+
+```
+    ┌─────────────────────────────────────────────────────────────┐
+    │                        StudyMate System                     │
+    └─────────────────────────────────────────────────────────────┘
+
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│   Client Layer   │     │   Cloud Layer    │     │     AI Layer     │
+│                  │     │                  │     │                  │
+│   Mobile App     │◄────┤    Supabase      │◄────┤     OpenAI       │
+│ (React Native)   │HTTPS│                  │ API │                  │
+│                  │     │ - PostgreSQL     │     │ - GPT Models     │
+│ - Study Tools    │     │ - Auth           │     │ - Embeddings     │
+│ - UI / UX        │     │ - Storage        │     │ - Completion     │
+└──────────────────┘     └──────────────────┘     └──────────────────┘
+```
+
+### System Components
+
+#### Client Layer (Mobile)
+
+- React Native with Expo for cross-platform support
+- Local caching for offline study
+- Voice module for hands-free interaction
+
+#### Cloud Layer (Backend)
+
+- Supabase Authentication (JWT-based)
+- PostgreSQL database for structured data
+- Realtime sync for collaborative features
+
+#### AI Layer
+
+- OpenAI API for summarization, quizzes, chat, and embeddings
+
+---
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js (v16 or higher)
-- Package Manager (npm, yarn, or pnpm)
-- Expo CLI (installed globally or via npx)
-- Development Environment:
-  - iOS Simulator (macOS) or Android Emulator
-  - Or a physical device with Expo Go app
+Ensure the following are installed:
+
+- Node.js v16 or higher
+- npm or yarn
+- Expo CLI
+  ```bash
+  npm install -g expo-cli
+  ```
+- OpenAI API Key
+- Supabase Account
 
 ### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone <your-repo-url>
-   cd StudyMate
-   ```
+```bash
+git clone https://github.com/yourusername/StudyMate.git
+cd StudyMate
+npm install
+# or
+yarn install
+```
 
-2. **Install dependencies**
-   ```bash
-   pnpm install
-   # or
-   npm install
-   ```
+### Configuration
 
-3. **Configure OpenAI API**
-   - Open `config/api-config.js`
-   - Add your OpenAI API key (obtain from [OpenAI Platform](https://platform.openai.com/api-keys))
-   - Configure model preferences as needed
+Create `config/api-config.js` (or use `.env`):
 
-4. **Start the development server**
-   ```bash
-   npx expo start
-   ```
+```javascript
+export const API_CONFIG = {
+  openaiApiKey: "YOUR_OPENAI_API_KEY",
+  supabaseUrl: "YOUR_SUPABASE_URL",
+  supabaseAnonKey: "YOUR_SUPABASE_ANON_KEY",
+  modelPreference: "gpt-4o"
+};
+```
 
-5. **Launch the application**
-   - Press `i` to open iOS simulator
-   - Press `a` to open Android emulator
-   - Scan the QR code with Expo Go app on your mobile device
+### Supabase Database Setup
 
----
+Create the following tables:
 
-## Configuration
+- `profiles` – User profile data
+- `study_materials` – Uploaded notes and documents
+- `quizzes` – Generated quiz data
+- `flashcards` – Flashcard decks and cards
 
-### OpenAI API Setup
+(Refer to `sql/00_complete_setup.sql` for the complete schema)
 
-1. Visit the [OpenAI Platform](https://platform.openai.com/api-keys)
-2. Create a new API key in your account dashboard
-3. Open `config/api-config.js` and add your API key
-4. Configure model preferences and feature flags as needed
-5. Restart the development server
+### Running the Application
 
-### Database Setup (Optional)
+```bash
+npx expo start
+```
 
-For full functionality including user authentication, data persistence, and collaborative features:
+- iOS Simulator: Press `i`
+- Android Emulator: Press `a`
+- Physical Device: Scan the QR code using Expo Go
 
-- **Recommended**: [Supabase](https://supabase.com) (free tier available)
-- **Alternative**: Firebase, PlanetScale, or other PostgreSQL-compatible databases
-- See `SETUP_DATABASE.md` for detailed setup instructions
+## 📱 Usage
 
----
+### Import Study Material
 
-## Project Structure
+1. Open Home tab
+2. Tap "Add Material"
+3. Paste text or upload a document
+4. Choose "Generate Summary", "Create Quiz", or "Generate Flashcards"
+
+### Study Mode
+
+1. Navigate to Library
+2. Select a flashcard deck
+3. Swipe:
+   - Right → Known
+   - Left → Learning
+
+### Hands-Free Voice Commands
+
+- "Read summary"
+- "Next card"
+- "Quiz me on Chapter 1"
+
+## 🛠 Tech Stack
+
+### Frontend
+
+- React Native (Expo)
+- Expo Router
+- Reanimated
+- React Context / Zustand
+
+### Backend
+
+- Supabase (PostgreSQL)
+- Supabase Auth
+- Supabase Realtime & Storage
+
+### AI
+
+- OpenAI GPT-4o
+- OpenAI GPT-3.5-Turbo
+
+## 📁 Project Structure
 
 ```
 StudyMate/
-├── app/                    # Main application screens
-│   ├── (tabs)/            # Tab navigation screens
-│   │   ├── index.js       # Home screen
-│   │   ├── plan.js        # Study Planner
-│   │   ├── summarizer.js  # AI Summarizer
-│   │   ├── quiz.js        # Quiz Generator
-│   │   ├── flashcards.js  # Flashcard Creator
-│   │   ├── chat.js        # AI Chat Assistant
-│   │   ├── handsfree.js   # Voice Control
-│   │   ├── groups.js      # Study Groups
-│   │   ├── tracker.js     # Time Tracker
-│   │   └── _layout.tsx    # Tab navigation layout
-│   ├── auth/              # Authentication screens
-│   └── +not-found.tsx     # 404 screen
-├── api/                   # API integration functions
-│   └── api.js            # OpenAI API functions
-├── config/                # Configuration files
-│   └── api-config.js     # API keys and configuration
-├── components/            # Reusable components
-├── contexts/              # React Context providers
-├── hooks/                 # Custom React hooks
-├── lib/                   # Utility functions and services
-│   ├── database.js       # Database service functions
-│   └── supabase.js       # Supabase client configuration
-├── app.json              # Expo app configuration
-├── package.json          # Dependencies and scripts
-└── tsconfig.json         # TypeScript configuration
+├── assets/                 # Images, fonts, static files
+├── config/                 # API keys and environment configs
+├── app/                    # Main app screens and routing
+├── components/             # Reusable UI components
+├── contexts/               # Global state management
+├── hooks/                  # Custom React hooks
+├── lib/                    # Utility functions and database setup
+├── sql/                    # Database schema and setup scripts
+├── api/                    # API integration files
+├── constants/              # Constant values
+├── App.js
+├── app.json
+├── package.json
+└── README.md
 ```
 
----
+## 🔧 Troubleshooting
 
-## Available Scripts
+### API Key Invalid
 
-| Command | Description |
-|---------|-------------|
-| `npm start` or `pnpm start` | Start Expo development server |
-| `npm run android` | Launch on Android device/emulator |
-| `npm run ios` | Launch on iOS simulator |
-| `npm run web` | Run in web browser |
-| `npm run lint` | Run ESLint to check code quality |
+- Verify API key format
+- Remove extra spaces
+- Ensure OpenAI billing is active
 
----
+### Android Emulator Crash
 
-## Technology Stack
+```bash
+npx expo start -c
+```
 
-| Category | Technology |
-|----------|-----------|
-| **Framework** | React Native with Expo |
-| **Navigation** | Expo Router |
-| **AI Integration** | OpenAI GPT-4o, GPT-4o-mini, GPT-3.5-turbo |
-| **State Management** | React Hooks & Context API |
-| **Styling** | React Native StyleSheet API |
-| **Database** | Supabase (PostgreSQL) |
-| **Authentication** | Supabase Auth |
+- Ensure Google Play Services are installed.
 
----
+### Supabase Data Not Saving
 
-## Performance & Optimization
+- Check Row Level Security (RLS) policies
+- Ensure user authentication before database writes
 
-- **Code Splitting** - Lazy loading for improved initial load times
-- **State Management** - Efficient React Hooks and Context API usage
-- **API Optimization** - Retry logic with exponential backoff and rate limiting
-- **Responsive Design** - Optimized layouts for all device sizes
-- **Database Optimization** - Efficient queries with proper indexing
-- **Caching** - Strategic caching to reduce API calls and improve performance
+## 🤝 Contributing
 
----
-
-## Security
-
-- **API Security** - Secure API key management and validation
-- **Data Protection** - Encrypted communication and secure data storage
-- **Input Validation** - Comprehensive input sanitization and validation
-- **Authentication** - JWT-based authentication with secure token management
-- **Authorization** - Row Level Security (RLS) for database access control
-- **Error Handling** - Secure error handling without exposing sensitive information
-- **Rate Limiting** - Protection against API abuse and excessive requests
-- **Security Best Practices** - See `SECURITY.md` for detailed security implementation and recommendations
-
----
-
-## Development Status
-
-| Feature | Status |
-|---------|--------|
-| Core UI Components | ✅ Complete |
-| AI Integration Framework | ✅ Complete |
-| Tab Navigation | ✅ Complete |
-| Basic Functionality | ✅ Complete |
-| Database Integration | ✅ Implemented |
-| Authentication System | ✅ Implemented |
-| Settings Page | ✅ Implemented |
-| Advanced Features | 🔄 In Progress |
-| Testing Suite | 🔄 Planned |
-
----
-
-## Contributing
-
-Contributions are welcome. Please follow these steps:
+Contributions are welcome!
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create a feature branch
+   ```bash
+   git checkout -b feature/your-feature
+   ```
+3. Commit your changes
+4. Push to your branch
 5. Open a Pull Request
 
-Please ensure your code follows the existing style and includes appropriate tests.
-
----
-
-## Troubleshooting
-
-### Common Issues
-
-**API Errors**
-- Verify your OpenAI API key is correctly configured in `config/api-config.js`
-- Check your API quota and billing status on OpenAI Platform
-- Ensure you have internet connectivity
-
-**Build Errors**
-- Clear cache: `npx expo start -c`
-- Delete `node_modules` and reinstall dependencies
-- Check Node.js version compatibility (v16+)
-
-**Database Connection Issues**
-- Verify Supabase credentials in configuration
-- Check network connectivity
-- Review `SETUP_DATABASE.md` for setup instructions
-
-For additional help, please open an issue on GitHub.
-
----
-
-## License
+## 📄 License
 
 This project is licensed under the MIT License.
+See the [LICENSE](./LICENSE) file for details.
 
 ---
 
-## Roadmap
+<div align="center">
 
-- [ ] Enhanced dark mode with theme customization
-- [ ] Offline mode with local data synchronization
-- [ ] Push notifications for study reminders and group updates
-- [ ] Advanced analytics dashboard with detailed insights
-- [ ] Integration with popular learning management systems
-- [ ] Multi-language support (i18n)
-- [ ] Collaborative real-time study sessions
-- [ ] Gamification features and achievement system
+Made with ❤️ for smarter learning
+
+⭐ Star this repository if you find it useful
+
+</div>
