@@ -1,13 +1,19 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 import { useTheme } from '@react-navigation/native';
 import { summarizeTextWithOpenAI } from '../api/api';
+
+// Document upload functionality allows users to select and load text content from various file formats
+// Supported formats: .txt (directly readable), .pdf/.doc/.docx (with manual text extraction)
 
 export default function SummarizerScreen() {
   const [notes, setNotes] = useState('');
   const [summary, setSummary] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const navTheme = useTheme();
 
   const handleSummarize = async () => {
@@ -17,7 +23,7 @@ export default function SummarizerScreen() {
     }
 
     setIsProcessing(true);
-    
+
     try {
       const aiSummary = await summarizeTextWithOpenAI(notes);
       setSummary(aiSummary);
@@ -35,6 +41,101 @@ export default function SummarizerScreen() {
     const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
     const keyPoints = sentences.slice(0, Math.min(5, sentences.length));
     return keyPoints.map((point, index) => `• ${point.trim()}`).join('\n\n');
+  };
+
+  const pickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['text/plain', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'],
+        copyToCacheDirectory: true
+      });
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        console.log('Document picking was cancelled');
+        return;
+      }
+
+      const document = result.assets[0];
+      console.log('Selected document:', document);
+
+      const fileType = document.name.split('.').pop().toLowerCase();
+
+      // For TXT files, read directly
+      if (fileType === 'txt') {
+        const content = await FileSystem.readAsStringAsync(document.uri, { encoding: FileSystem.EncodingType.UTF8 });
+        setNotes(content);
+        Alert.alert('Success', 'Document loaded successfully!');
+        return;
+      }
+
+      // For PDF, DOC, DOCX, upload to backend for extraction
+      if (['pdf', 'doc', 'docx'].includes(fileType)) {
+        await uploadFileToBackend(document);
+      } else {
+        Alert.alert('Unsupported Format', `File type .${fileType} is not supported.`);
+      }
+
+    } catch (error) {
+      console.error('Error picking document:', error);
+      Alert.alert('Error', 'Failed to pick document. Please try again.');
+    }
+  };
+
+  // Upload file to backend for text extraction
+  const uploadFileToBackend = async (fileAsset) => {
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', {
+        uri: fileAsset.uri,
+        name: fileAsset.name,
+        type: fileAsset.mimeType || 'application/octet-stream',
+      });
+
+      // Using a placeholder endpoint as per instruction
+      // In production, this should be configured in api-config.js
+      const API_ENDPOINT = 'https://api.studymate.com/v1/extract-document';
+
+      console.log(`Uploading ${fileAsset.name} to ${API_ENDPOINT}...`);
+
+      const response = await fetch(API_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed with status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (data && data.text) {
+        setNotes(data.text);
+        Alert.alert('Success', 'Document extracted successfully!');
+      } else {
+        throw new Error('No text returned from extraction service');
+      }
+
+    } catch (error) {
+      console.error('File upload error:', error);
+
+      let errorMessage = 'Could not extract text from this document.';
+
+      if (error.message.includes('Network request failed')) {
+        errorMessage = 'Network error: Could not reach the extraction server. Please check your internet connection or backend configuration.';
+        // DEV: Uncomment the line below to simulate success for testing UI without a backend
+        // setNotes("This is simulated extracted text from the PDF. The backend endpoint is currently a placeholder."); setIsUploading(false); return;
+      } else if (error.message.includes('Upload failed')) {
+        errorMessage = error.message;
+      }
+
+      Alert.alert('Extraction Failed', errorMessage);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const clearAll = () => {
@@ -74,16 +175,28 @@ export default function SummarizerScreen() {
           numberOfLines={8}
           textAlignVertical="top"
         />
-        
-        <TouchableOpacity
-          style={[styles.summarizeButton, { backgroundColor: navTheme.colors.primary || '#6366F1' }]}
-          onPress={handleSummarize}
-          disabled={isProcessing || !notes.trim()}
-        >
-          <Text style={styles.summarizeButtonText}>
-            {isProcessing ? '🔄 Summarizing...' : '🚀 Summarize'}
-          </Text>
-        </TouchableOpacity>
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={[styles.uploadButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}
+            onPress={pickDocument}
+            disabled={isUploading}
+          >
+            <Text style={[styles.uploadButtonText, { color: navTheme.colors.text }]}>
+              {isUploading ? '⏳ Uploading...' : '📁 Upload Doc'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.summarizeButton, { backgroundColor: navTheme.colors.primary || '#6366F1' }]}
+            onPress={handleSummarize}
+            disabled={isProcessing || !notes.trim()}
+          >
+            <Text style={styles.summarizeButtonText}>
+              {isProcessing ? '🔄 Summarizing...' : '🚀 Summarize'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Summary Section */}
@@ -93,7 +206,7 @@ export default function SummarizerScreen() {
           <Text style={[styles.summaryText, { color: navTheme.colors.text }]}>
             {summary}
           </Text>
-          
+
           <View style={styles.summaryActions}>
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: navTheme.colors.primary || '#6366F1' }]}
@@ -101,7 +214,7 @@ export default function SummarizerScreen() {
             >
               <Text style={styles.actionButtonText}>📋 Copy</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={[styles.actionButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}
               onPress={clearAll}
@@ -116,9 +229,10 @@ export default function SummarizerScreen() {
       <View style={[styles.instructionsSection, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
         <Text style={[styles.instructionsTitle, { color: navTheme.colors.text }]}>💡 How it works</Text>
         <Text style={[styles.instructionsText, { color: navTheme.colors.text }]}>
-          1. Paste or type your notes/text{'\n'}
+          1. Paste or type your notes/text, or upload a document{'\n'}
           2. Click "Summarize" to get AI-powered summary{'\n'}
-          3. Copy the summary for your studies
+          3. Copy the summary for your studies{'\n'}
+          Note: For PDF/DOC files, extract text first and paste it here
         </Text>
       </View>
     </ScrollView>
@@ -157,6 +271,27 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 5,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 10,
+  },
+  uploadButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  uploadButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   sectionTitle: {
     fontSize: 19,
