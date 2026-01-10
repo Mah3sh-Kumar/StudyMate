@@ -169,6 +169,7 @@ StudyMate/
 - **Authorization** - Row Level Security (RLS) for database access control
 - **Error Handling** - Secure error handling without exposing sensitive information
 - **Rate Limiting** - Protection against API abuse and excessive requests
+- **Security Best Practices** - See `SECURITY.md` for detailed security implementation and recommendations
 
 ---
 

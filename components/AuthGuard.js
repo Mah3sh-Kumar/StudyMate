@@ -15,6 +15,11 @@ export default function AuthGuard({ children }) {
     }
   }, [user, loading]);
 
+  // Additional check to ensure user is authenticated before rendering children
+  if (!loading && !user) {
+    return null; // Don't render anything while redirecting
+  }
+
   if (loading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: navTheme.colors.background }]}>

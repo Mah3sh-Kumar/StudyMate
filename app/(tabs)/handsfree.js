@@ -17,26 +17,47 @@ export default function HandsfreeScreen() {
   const [inputText, setInputText] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [pulseAnimation] = useState(new Animated.Value(1));
+  const [waveAnimation] = useState([new Animated.Value(0.3), new Animated.Value(0.5), new Animated.Value(0.3)]);
 
   // Pulse animation for listening state
   useEffect(() => {
     if (isListening) {
+      // Microphone pulse animation
       Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnimation, {
-            toValue: 1.2,
-            duration: 1000,
+            toValue: 1.15,
+            duration: 800,
             useNativeDriver: true,
           }),
           Animated.timing(pulseAnimation, {
             toValue: 1,
-            duration: 1000,
+            duration: 800,
             useNativeDriver: true,
           }),
         ])
       ).start();
+
+      // Audio wave animations
+      waveAnimation.forEach((anim, index) => {
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(anim, {
+              toValue: 1,
+              duration: 400 + index * 100,
+              useNativeDriver: true,
+            }),
+            Animated.timing(anim, {
+              toValue: 0.3,
+              duration: 400 + index * 100,
+              useNativeDriver: true,
+            }),
+          ])
+        ).start();
+      });
     } else {
       pulseAnimation.setValue(1);
+      waveAnimation.forEach(anim => anim.setValue(0.3));
     }
   }, [isListening]);
 
@@ -183,8 +204,25 @@ export default function HandsfreeScreen() {
         </TouchableOpacity>
         
         <Text style={[styles.microphoneLabel, { color: navTheme.colors.text }]}>
-          {isListening ? 'Listening...' : 'Tap to speak'}
+          {isListening ? 'Listening...' : isProcessing ? 'Processing...' : 'Tap to speak'}
         </Text>
+        
+        {isListening && (
+          <View style={styles.audioWaves}>
+            <Animated.View style={[
+              styles.audioWave,
+              { backgroundColor: navTheme.colors.primary || '#6366F1', opacity: waveAnimation[0] }
+            ]} />
+            <Animated.View style={[
+              styles.audioWave,
+              { backgroundColor: navTheme.colors.primary || '#6366F1', opacity: waveAnimation[1] }
+            ]} />
+            <Animated.View style={[
+              styles.audioWave,
+              { backgroundColor: navTheme.colors.primary || '#6366F1', opacity: waveAnimation[2] }
+            ]} />
+          </View>
+        )}
       </View>
 
       {/* Text Input */}
@@ -256,17 +294,20 @@ export default function HandsfreeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 10,
   },
   header: {
     alignItems: 'center',
-    marginTop: 60,
-    marginBottom: 30,
+    marginTop: 8,
+    marginBottom: 32,
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: '800',
     marginBottom: 8,
+    letterSpacing: 0.5,
   },
   subtitle: {
     fontSize: 16,
@@ -275,76 +316,81 @@ const styles = StyleSheet.create({
   },
   microphoneContainer: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 28,
   },
   microphoneButton: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 130,
+    height: 130,
+    borderRadius: 65,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: '#6366F1',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.35,
     shadowRadius: 16,
-    elevation: 8,
+    elevation: 10,
   },
   microphoneIcon: {
-    width: 60,
-    height: 60,
     justifyContent: 'center',
     alignItems: 'center',
   },
   microphoneText: {
-    fontSize: 32,
+    fontSize: 50,
   },
   microphoneLabel: {
-    marginTop: 16,
-    fontSize: 16,
-    fontWeight: '500',
+    marginTop: 20,
+    fontSize: 18,
+    fontWeight: '700',
   },
   inputContainer: {
     flexDirection: 'row',
-    marginBottom: 20,
-    gap: 12,
+    marginBottom: 16,
+    alignItems: 'center',
+    gap: 10,
   },
   textInput: {
     flex: 1,
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 15,
-    fontSize: 16,
-    minHeight: 50,
-  },
-  sendButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderWidth: 1.5,
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    fontSize: 15,
+    height: 48,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
+  },
+  sendButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
   },
   sendButtonText: {
     fontSize: 20,
   },
   conversationContainer: {
     flex: 1,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   messageContainer: {
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 20,
     marginBottom: 12,
-    maxWidth: '85%',
+    maxWidth: '82%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   userMessage: {
     alignSelf: 'flex-end',
@@ -353,27 +399,42 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   messageText: {
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 22,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   messageTimestamp: {
-    fontSize: 12,
-    opacity: 0.7,
+    fontSize: 11,
+    opacity: 0.65,
+    alignSelf: 'flex-end',
   },
   clearButton: {
-    padding: 16,
-    borderRadius: 12,
+    padding: 14,
+    borderRadius: 14,
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
+    marginBottom: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 3,
   },
   clearButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  audioWaves: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 30,
+  },
+  audioWave: {
+    width: 6,
+    height: 28,
+    borderRadius: 3,
   },
 });

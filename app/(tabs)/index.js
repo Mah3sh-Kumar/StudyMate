@@ -7,8 +7,14 @@ export default function HomeScreen() {
   const navTheme = useTheme();
   const navigation = useNavigation();
 
-  const navigateToTab = (tabName) => {
-    navigation.navigate(tabName);
+  const navigateToScreen = (screenName) => {
+    // Navigate to tab screens
+    if (['chat', 'handsfree', 'groups'].includes(screenName)) {
+      navigation.navigate(screenName);
+    } else {
+      // Navigate to non-tab screens
+      navigation.navigate(screenName);
+    }
   };
 
   const features = [
@@ -17,42 +23,42 @@ export default function HomeScreen() {
       title: '💬 AI Chat',
       description: 'Get instant help with study questions',
       color: '#3B82F6',
-      onPress: () => navigateToTab('chat')
+      onPress: () => navigateToScreen('chat')
     },
     {
       id: 2,
       title: '🧠 Quiz',
       description: 'Create custom quizzes',
       color: '#F59E0B',
-      onPress: () => navigateToTab('quiz')
+      onPress: () => navigateToScreen('quiz')
     },
     {
       id: 3,
-      title: '🃏 Flashcards',
-      description: 'Study with interactive cards',
-      color: '#EF4444',
-      onPress: () => navigateToTab('flashcards')
-    },
-    {
-      id: 4,
       title: '📝 Summarizer',
       description: 'Summarize notes instantly',
       color: '#10B981',
-      onPress: () => navigateToTab('summarizer')
+      onPress: () => navigateToScreen('summarizer')
     },
     {
-      id: 5,
+      id: 4,
       title: '👥 Groups',
       description: 'Study with classmates',
       color: '#EC4899',
-      onPress: () => navigateToTab('groups')
+      onPress: () => navigateToScreen('groups')
     },
     {
-      id: 6,
+      id: 5,
       title: '📊 Tracker',
       description: 'Monitor your progress',
       color: '#06B6D4',
-      onPress: () => navigateToTab('tracker')
+      onPress: () => navigateToScreen('tracker')
+    },
+    {
+      id: 6,
+      title: '📋 Study Plan',
+      description: 'Plan your study schedule',
+      color: '#8B5CF6',
+      onPress: () => navigateToScreen('plan')
     }
   ];
 
@@ -62,6 +68,40 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <Text style={[styles.welcomeText, { color: navTheme.colors.text }]}>Welcome back! 👋</Text>
         <Text style={[styles.subtitle, { color: navTheme.colors.text }]}>Your AI-powered study companion</Text>
+      </View>
+
+      {/* Featured Tools */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>Featured Tools</Text>
+        <View style={styles.featuredContainer}>
+          <TouchableOpacity
+            style={[styles.featuredCard, { backgroundColor: navTheme.colors.card, borderColor: '#8B5CF6' }]}
+            onPress={() => navigateToScreen('handsfree')}
+          >
+            <View style={[styles.featuredIcon, { backgroundColor: '#8B5CF6' }]}>  
+              <Text style={styles.featuredIconText}>🎧</Text>
+            </View>
+            <View style={styles.featuredContent}>
+              <Text style={[styles.featuredTitle, { color: navTheme.colors.text }]}>Hands-Free Mode</Text>
+              <Text style={[styles.featuredDescription, { color: navTheme.colors.text }]}>Voice-controlled study assistant for learning on the go</Text>
+            </View>
+            <Text style={styles.featuredArrow}>→</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.featuredCard, { backgroundColor: navTheme.colors.card, borderColor: '#EF4444' }]}
+            onPress={() => navigateToScreen('flashcards')}
+          >
+            <View style={[styles.featuredIcon, { backgroundColor: '#EF4444' }]}>  
+              <Text style={styles.featuredIconText}>🃏</Text>
+            </View>
+            <View style={styles.featuredContent}>
+              <Text style={[styles.featuredTitle, { color: navTheme.colors.text }]}>Smart Flashcards</Text>
+              <Text style={[styles.featuredDescription, { color: navTheme.colors.text }]}>Create and study with AI-powered flashcard decks</Text>
+            </View>
+            <Text style={styles.featuredArrow}>→</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Features Grid */}
@@ -88,21 +128,7 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* Quick Start */}
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>Quick Start</Text>
-        <View style={[styles.quickStartContainer, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
-          <Text style={[styles.quickStartText, { color: navTheme.colors.text }]}>
-            Ready to study? Choose a tool above to get started!
-          </Text>
-          <TouchableOpacity 
-            style={[styles.quickStartButton, { backgroundColor: navTheme.colors.primary || '#6366f1' }]}
-            onPress={() => navigateToTab('flashcards')}
-          >
-            <Text style={styles.quickStartButtonText}>🚀 Start Learning</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+
     </ScrollView>
   );
 }
@@ -113,84 +139,133 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
-    padding: 40,
+    padding: 24,
+    paddingTop: 16,
     paddingBottom: 20,
   },
   welcomeText: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 17,
     marginTop: 4,
+    opacity: 0.8,
   },
   section: {
-    marginTop: 10,
+    marginTop: 12,
     marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16,
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: 18,
     marginLeft: 20,
+    letterSpacing: 0.5,
   },
   featuresGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     marginHorizontal: 20,
   },
   featureCard: {
-    padding: 16,
-    borderRadius: 16,
+    padding: 20,
+    borderRadius: 20,
     borderWidth: 1,
     alignItems: 'center',
-    minHeight: 160,
-    width: '45%',
-    marginBottom: 16,
+    minHeight: 170,
+    width: '47%',
+    marginBottom: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
   },
   featureIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   featureIconText: {
-    fontSize: 20,
+    fontSize: 24,
     color: '#FFFFFF',
   },
   featureTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 6,
     textAlign: 'center',
   },
   featureDescription: {
     fontSize: 13,
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 19,
+    opacity: 0.75,
   },
-  quickStartContainer: {
+
+  featuredContainer: {
     marginHorizontal: 20,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
+    gap: 16,
   },
-  quickStartText: {
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  quickStartButton: {
-    paddingVertical: 12,
-    borderRadius: 12,
+  featuredCard: {
+    flexDirection: 'row',
     alignItems: 'center',
+    padding: 18,
+    borderRadius: 20,
+    borderWidth: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.12,
+    shadowRadius: 15,
+    elevation: 8,
+    marginBottom: 12,
   },
-  quickStartButtonText: {
+  featuredIcon: {
+    width: 54,
+    height: 54,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  featuredIconText: {
+    fontSize: 26,
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+  },
+  featuredContent: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  featuredTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 4,
+    letterSpacing: 0.3,
+  },
+  featuredDescription: {
+    fontSize: 13,
+    lineHeight: 18,
+    opacity: 0.75,
+  },
+  featuredArrow: {
+    fontSize: 24,
+    color: '#9CA3AF',
+    marginLeft: 8,
   },
 });
 

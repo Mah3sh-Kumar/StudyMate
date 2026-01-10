@@ -5,80 +5,80 @@ import { Text, View, StyleSheet } from 'react-native';
 export const EnhancedTabIcons = {
   Home: ({ color, size = 24, focused }) => (
     <View style={[styles.iconContainer, focused && styles.focusedIcon]}>
-      <View style={[styles.iconBackground, focused && styles.focusedBackground, { backgroundColor: focused ? '#6366F1' : 'transparent' }]}>
-        <Text style={[styles.icon, { color: focused ? '#FFFFFF' : color, fontSize: size }]}>🏠</Text>
+      <View style={[styles.iconBackground, focused && styles.focusedBackground, focused && { backgroundColor: '#6366F1' }]}>
+        <Text style={[styles.icon, { fontSize: 22 }]}>{focused ? '🏠' : '🏘️'}</Text>
       </View>
     </View>
   ),
   
   Planner: ({ color, size = 24, focused }) => (
     <View style={[styles.iconContainer, focused && styles.focusedIcon]}>
-      <View style={[styles.iconBackground, focused && styles.focusedBackground, { backgroundColor: focused ? '#10B981' : 'transparent' }]}>
-        <Text style={[styles.icon, { color: focused ? '#FFFFFF' : color, fontSize: size }]}>📅</Text>
+      <View style={[styles.iconBackground, focused && styles.focusedBackground, focused && { backgroundColor: '#10B981' }]}>
+        <Text style={[styles.icon, { fontSize: 22 }]}>📅</Text>
       </View>
     </View>
   ),
   
   Chat: ({ color, size = 24, focused }) => (
     <View style={[styles.iconContainer, focused && styles.focusedIcon]}>
-      <View style={[styles.iconBackground, focused && styles.focusedBackground, { backgroundColor: focused ? '#3B82F6' : 'transparent' }]}>
-        <Text style={[styles.icon, { color: focused ? '#FFFFFF' : color, fontSize: size }]}>💬</Text>
+      <View style={[styles.iconBackground, focused && styles.focusedBackground, focused && { backgroundColor: '#3B82F6' }]}>
+        <Text style={[styles.icon, { fontSize: 22 }]}>💬</Text>
       </View>
     </View>
   ),
   
   Quiz: ({ color, size = 24, focused }) => (
     <View style={[styles.iconContainer, focused && styles.focusedIcon]}>
-      <View style={[styles.iconBackground, focused && styles.focusedBackground, { backgroundColor: focused ? '#F59E0B' : 'transparent' }]}>
-        <Text style={[styles.icon, { color: focused ? '#FFFFFF' : color, fontSize: size }]}>🧠</Text>
+      <View style={[styles.iconBackground, focused && styles.focusedBackground, focused && { backgroundColor: '#F59E0B' }]}>
+        <Text style={[styles.icon, { fontSize: 22 }]}>🧠</Text>
       </View>
     </View>
   ),
   
   Groups: ({ color, size = 24, focused }) => (
     <View style={[styles.iconContainer, focused && styles.focusedIcon]}>
-      <View style={[styles.iconBackground, focused && styles.focusedBackground, { backgroundColor: focused ? '#EC4899' : 'transparent' }]}>
-        <Text style={[styles.icon, { color: focused ? '#FFFFFF' : color, fontSize: size }]}>👥</Text>
+      <View style={[styles.iconBackground, focused && styles.focusedBackground, focused && { backgroundColor: '#EC4899' }]}>
+        <Text style={[styles.icon, { fontSize: 22 }]}>👥</Text>
       </View>
     </View>
   ),
   
   Tracker: ({ color, size = 24, focused }) => (
     <View style={[styles.iconContainer, focused && styles.focusedIcon]}>
-      <View style={[styles.iconBackground, focused && styles.focusedBackground, { backgroundColor: focused ? '#06B6D4' : 'transparent' }]}>
-        <Text style={[styles.icon, { color: focused ? '#FFFFFF' : color, fontSize: size }]}>📊</Text>
+      <View style={[styles.iconBackground, focused && styles.focusedBackground, focused && { backgroundColor: '#06B6D4' }]}>
+        <Text style={[styles.icon, { fontSize: 22 }]}>📊</Text>
       </View>
     </View>
   ),
   
   Handsfree: ({ color, size = 24, focused }) => (
     <View style={[styles.iconContainer, focused && styles.focusedIcon]}>
-      <View style={[styles.iconBackground, focused && styles.focusedBackground, { backgroundColor: focused ? '#8B5CF6' : 'transparent' }]}>
-        <Text style={[styles.icon, { color: focused ? '#FFFFFF' : color, fontSize: size }]}>🎧</Text>
+      <View style={[styles.iconBackground, focused && styles.focusedBackground, focused && { backgroundColor: '#8B5CF6' }]}>
+        <Text style={[styles.icon, { fontSize: 22 }]}>🎧</Text>
       </View>
     </View>
   ),
   
   Flashcards: ({ color, size = 24, focused }) => (
     <View style={[styles.iconContainer, focused && styles.focusedIcon]}>
-      <View style={[styles.iconBackground, focused && styles.focusedBackground, { backgroundColor: focused ? '#EF4444' : 'transparent' }]}>
-        <Text style={[styles.icon, { color: focused ? '#FFFFFF' : color, fontSize: size }]}>🃏</Text>
+      <View style={[styles.iconBackground, focused && styles.focusedBackground, focused && { backgroundColor: '#EF4444' }]}>
+        <Text style={[styles.icon, { fontSize: 22 }]}>🃏</Text>
       </View>
     </View>
   ),
   
   Summarizer: ({ color, size = 24, focused }) => (
     <View style={[styles.iconContainer, focused && styles.focusedIcon]}>
-      <View style={[styles.iconBackground, focused && styles.focusedBackground, { backgroundColor: focused ? '#10B981' : 'transparent' }]}>
-        <Text style={[styles.icon, { color: focused ? '#FFFFFF' : color, fontSize: size }]}>📝</Text>
+      <View style={[styles.iconBackground, focused && styles.focusedBackground, focused && { backgroundColor: '#10B981' }]}>
+        <Text style={[styles.icon, { fontSize: 22 }]}>📝</Text>
       </View>
     </View>
   ),
   
   Settings: ({ color, size = 24, focused }) => (
     <View style={[styles.iconContainer, focused && styles.focusedIcon]}>
-      <View style={[styles.iconBackground, focused && styles.focusedBackground, { backgroundColor: focused ? '#6B7280' : 'transparent' }]}>
-        <Text style={[styles.icon, { color: focused ? '#FFFFFF' : color, fontSize: size }]}>⚙️</Text>
+      <View style={[styles.iconBackground, focused && styles.focusedBackground, focused && { backgroundColor: '#6B7280' }]}>
+        <Text style={[styles.icon, { fontSize: 22 }]}>⚙️</Text>
       </View>
     </View>
   ),
@@ -152,33 +152,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 4,
-    borderRadius: 8,
+    borderRadius: 12,
   },
   focusedIcon: {
-    transform: [{ scale: 1.1 }],
+    transform: [{ scale: 1.05 }],
   },
   iconBackground: {
-    padding: 8,
+    padding: 6,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
+    minWidth: 36,
+    minHeight: 36,
   },
   focusedBackground: {
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 3,
     },
     shadowOpacity: 0.3,
-    shadowRadius: 4.65,
+    shadowRadius: 6,
     elevation: 8,
   },
   icon: {

@@ -53,31 +53,26 @@ const retryWithBackoff = async (fn, retries = RATE_LIMIT_CONFIG.maxRetries) => {
  */
 const handleOpenAIError = (response, errorData) => {
   const status = response.status;
-  const message = errorData?.error?.message || 'Unknown error';
   
   switch (status) {
     case 400:
-      throw new Error(`Bad request: ${message}. Please check your input.`);
+      throw new Error('Bad request: Please check your input.');
     case 401:
-      throw new Error(`Authentication failed: ${message}. Please check your API key.`);
+      throw new Error('Authentication failed. Please check your API configuration.');
     case 403:
-      throw new Error(`Access denied: ${message}. Please check your API permissions.`);
+      throw new Error('Access denied. Please check your API permissions.');
     case 404:
-      throw new Error(`Model not found: ${message}. Please check your model configuration.`);
+      throw new Error('Model not found. Please check your model configuration.');
     case 429:
-      if (message.includes('quota')) {
-        throw new Error(`Quota exceeded: ${message}. Please check your OpenAI billing and plan.`);
-      } else {
-        throw new Error(`Rate limit exceeded: ${message}. Please wait a moment and try again.`);
-      }
+      throw new Error('Rate limit exceeded. Please wait a moment and try again.');
     case 500:
-      throw new Error(`OpenAI server error: ${message}. Please try again later.`);
+      throw new Error('Service temporarily unavailable. Please try again later.');
     case 502:
     case 503:
     case 504:
-      throw new Error(`OpenAI service temporarily unavailable: ${message}. Please try again later.`);
+      throw new Error('Service temporarily unavailable. Please try again later.');
     default:
-      throw new Error(`API request failed: ${status} - ${message}`);
+      throw new Error(`API request failed with status ${status}`);
   }
 };
 
@@ -94,6 +89,18 @@ export const getAIChatResponse = async (messages) => {
 
   if (!OPENAI_API_KEY) {
     throw new Error('OpenAI API key is not configured. Please check your configuration.');
+  }
+
+  // Validate inputs
+  if (!Array.isArray(messages) || messages.length === 0) {
+    throw new Error('Invalid messages format');
+  }
+
+  // Limit message length to prevent injection
+  for (const message of messages) {
+    if (typeof message.content !== 'string' || message.content.length > 5000) {
+      throw new Error('Message content is too long');
+    }
   }
 
   const chatConfig = getModelConfig('CHAT');
@@ -128,10 +135,8 @@ export const getAIChatResponse = async (messages) => {
     } catch (error) {
       console.error("Error getting AI chat response:", error);
       
-      // Provide user-friendly error messages
-      if (error.message.includes('quota exceeded')) {
-        throw new Error("Your OpenAI account has exceeded its quota. Please check your billing and plan, or try again later.");
-      } else if (error.message.includes('rate limit')) {
+      // Don't expose raw error messages
+      if (error.message.includes('rate limit')) {
         throw new Error("Too many requests. Please wait a moment and try again.");
       } else if (error.message.includes('authentication')) {
         throw new Error("Authentication failed. Please check your API configuration.");
@@ -153,6 +158,15 @@ export const getAIChatResponse = async (messages) => {
 export const summarizeTextWithOpenAI = async (textToSummarize) => {
   if (!getConfig('FEATURES.ENABLE_AI_FEATURES')) {
     throw new Error('AI features are disabled in this environment');
+  }
+
+  // Validate input
+  if (typeof textToSummarize !== 'string' || textToSummarize.length === 0) {
+    throw new Error('Invalid text to summarize');
+  }
+
+  if (textToSummarize.length > 10000) {
+    throw new Error('Text to summarize is too long');
   }
 
   const analysisConfig = getModelConfig('ANALYSIS');
@@ -178,14 +192,15 @@ export const summarizeTextWithOpenAI = async (textToSummarize) => {
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(`API request failed: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+      handleOpenAIError(response, errorData);
     }
     
     const data = await response.json();
     return data.choices[0].message.content;
   } catch (error) {
     console.error("Error summarizing text:", error);
-    throw error;
+    // Don't expose raw error messages
+    throw new Error("Failed to summarize text. Please try again.");
   }
 };
 
@@ -198,6 +213,15 @@ export const summarizeTextWithOpenAI = async (textToSummarize) => {
 export const generateQuizWithOpenAI = async (contextText) => {
   if (!getConfig('FEATURES.ENABLE_AI_FEATURES')) {
     throw new Error('AI features are disabled in this environment');
+  }
+
+  // Validate input
+  if (typeof contextText !== 'string' || contextText.length === 0) {
+    throw new Error('Invalid context text for quiz generation');
+  }
+
+  if (contextText.length > 10000) {
+    throw new Error('Context text is too long for quiz generation');
   }
 
   const generationConfig = getModelConfig('GENERATION');
@@ -222,7 +246,7 @@ export const generateQuizWithOpenAI = async (contextText) => {
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(`API request failed: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+      handleOpenAIError(response, errorData);
     }
     
     const data = await response.json();
@@ -236,6 +260,7 @@ export const generateQuizWithOpenAI = async (contextText) => {
     return quizData;
   } catch (error) {
     console.error("Error generating quiz:", error);
+    // Don't expose raw error messages
     throw new Error("Failed to generate quiz. Please try again.");
   }
 };
@@ -299,6 +324,15 @@ export const generateFlashcardsWithOpenAI = async (studyMaterial) => {
     throw new Error('AI features are disabled in this environment');
   }
 
+  // Validate input
+  if (typeof studyMaterial !== 'string' || studyMaterial.length === 0) {
+    throw new Error('Invalid study material for flashcard generation');
+  }
+
+  if (studyMaterial.length > 10000) {
+    throw new Error('Study material is too long for flashcard generation');
+  }
+
   const generationConfig = getModelConfig('GENERATION');
   const promptConfig = getAIPromptConfig('FLASHCARD');
   const prompt = promptConfig.prompt + `\n\nStudy material: ${studyMaterial}`;
@@ -321,7 +355,7 @@ export const generateFlashcardsWithOpenAI = async (studyMaterial) => {
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(`API request failed: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+      handleOpenAIError(response, errorData);
     }
     
     const data = await response.json();
@@ -334,6 +368,7 @@ export const generateFlashcardsWithOpenAI = async (studyMaterial) => {
     return flashcardData.flashcards;
   } catch (error) {
     console.error("Error generating flashcards:", error);
+    // Don't expose raw error messages
     throw new Error("Failed to generate flashcards. Please try again.");
   }
 };

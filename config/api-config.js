@@ -1,11 +1,17 @@
 // API Configuration for StudyMate
 // Copy this file to config/api-config.js and update with your actual values
+import Constants from 'expo-constants';
+
+// Helper function to get environment variables
+const getEnvVar = (key, fallback = '') => {
+  return Constants.expoConfig?.extra?.[key] || process.env[key] || fallback;
+};
 
 export const API_CONFIG = {
   // OpenAI Configuration
   OPENAI: {
-    API_KEY: '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', // Get from https://platform.openai.com/api-keys
-    BASE_URL: 'https://api.openai.com/v1',
+    API_KEY: getEnvVar('EXPO_PUBLIC_OPENAI_API_KEY'), // Get from environment variables
+    BASE_URL: getEnvVar('EXPO_PUBLIC_OPENAI_BASE_URL', 'https://api.openai.com/v1'),
     
     // Model-specific configurations for different tasks
     MODELS: {
@@ -58,8 +64,8 @@ export const API_CONFIG = {
 
   // Database Configuration
   DATABASE: {
-    SUPABASE_URL: 'https://oyvmxabdpcnutnrzmpgc.supabase.co', // Get from Supabase dashboard
-    SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95dm14YWJkcGNudXRucnptcGdjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0NTU1NDEsImV4cCI6MjA3MjAzMTU0MX0.cCwzpiuuufGODI3RzWeTfWqBZ45IAV-qcVqFUfaHWt8',
+    SUPABASE_URL: getEnvVar('EXPO_PUBLIC_SUPABASE_URL', 'https://koozfphoybhwzqolmgzn.supabase.co'), // Get from Supabase dashboard
+    SUPABASE_ANON_KEY: getEnvVar('EXPO_PUBLIC_SUPABASE_ANON_KEY'),
     ENABLE_REALTIME: true,
     ENABLE_AUTH: true
   },
@@ -198,7 +204,7 @@ export const validateConfig = () => {
   
   for (const key of requiredKeys) {
     const value = getConfig(key);
-    if (!value || value.includes('YOUR_') || value.includes('HERE')) {
+    if (!value || value.trim() === '') {
       return false;
     }
   }

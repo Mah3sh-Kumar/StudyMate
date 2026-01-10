@@ -149,31 +149,73 @@ export function AuthProvider({ children }) {
   }, []);
 
   const signUp = async (email, password, metadata) => {
-    // Step 1: Create Auth User
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    try {
+      // Validate username format before attempting signup
+      const username = metadata.username?.trim();
+      if (!username || username.length < 3 || username.length > 30) {
+        return { error: 'Username must be between 3 and 30 characters' };
+      }
+      if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        return { error: 'Username can only contain letters, numbers, and underscores' };
+      }
 
-    if (error) return { error: error.message };
-
-    const user = data.user;
-
-    // Step 2: Save extra profile data in "profiles" table
-    if (user) {
-      const { error: profileError } = await supabase.from('profiles').insert([
-        {
-          id: user.id, // match auth user id
-          full_name: metadata.full_name,
-          username: metadata.username,
-          email: email,
+      // Create Auth User with metadata
+      // The database trigger will automatically create the profile from raw_user_meta_data
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: metadata.full_name?.trim() || '',
+            username: username,
+          },
         },
-      ]);
+      });
 
-      if (profileError) return { error: profileError.message };
+      if (error) {
+        console.error('SignUp error:', error);
+        return { error: error.message };
+      }
+
+      const userId = data.user?.id;
+      if (!userId) {
+        return { error: 'User creation failed' };
+      }
+
+      // Wait a moment for the trigger to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Verify profile was created by trigger, if not create it manually (fallback)
+      const { data: profile, error: checkError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (!profile && !checkError) {
+        // Trigger didn't create profile, create it manually
+        console.log('Creating profile manually (trigger may not exist)');
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            email: email,
+            full_name: metadata.full_name?.trim() || '',
+            username: username,
+          });
+
+        if (insertError) {
+          console.error('Manual profile creation failed:', insertError);
+          return { error: 'Database error saving new user: ' + insertError.message };
+        }
+      }
+
+      console.log('User signed up successfully:', userId);
+      return { error: null };
+    } catch (err) {
+      console.error('SignUp exception:', err);
+      return { error: err.message || 'An unexpected error occurred during signup' };
     }
-
-    return { error: null };
   };
 
   const signIn = async (email, password) => {

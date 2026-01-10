@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, FlatList, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, FlatList, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useTheme } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -16,6 +16,15 @@ export default function PlanScreen() {
   const [goals, setGoals] = useState('');
   const [plan, setPlan] = useState(null);
   const { updateStudyPreferences } = useAuth();
+  
+  // Get current date
+  const getCurrentDate = () => {
+    const date = new Date();
+    const options = { month: 'short', day: 'numeric' };
+    return date.toLocaleDateString('en-US', options);
+  };
+  
+  const currentDate = getCurrentDate();
 
   const handleGeneratePlan = () => {
     if (!subjects.trim() || !goals.trim()) {
@@ -49,14 +58,24 @@ export default function PlanScreen() {
   );
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: navTheme.colors.background }]} showsVerticalScrollIndicator={false}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: navTheme.colors.text }]}>📅 AI Study Planner</Text>
-        <Text style={[styles.subtitle, { color: navTheme.colors.text }]}>
-          Create personalized study schedules
-        </Text>
-      </View>
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <ScrollView 
+        style={[styles.container, { backgroundColor: navTheme.colors.background }]} 
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.dateContainer}>
+            <Text style={[styles.dateText, { color: navTheme.colors.primary || '#6366F1' }]}>{currentDate}</Text>
+          </View>
+          <Text style={[styles.title, { color: navTheme.colors.text }]}>AI Study Planner</Text>
+          <Text style={[styles.subtitle, { color: navTheme.colors.text }]}>Create personalized study schedules</Text>
+        </View>
 
       {!plan ? (
         <View style={styles.formContainer}>
@@ -65,9 +84,14 @@ export default function PlanScreen() {
             <TextInput
               style={[styles.textInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
               placeholder="Enter your subjects (e.g., Math, History, Biology)"
-              placeholderTextColor={navTheme.colors.text}
+              placeholderTextColor="#9CA3AF"
               value={subjects}
               onChangeText={setSubjects}
+              multiline={true}
+              numberOfLines={2}
+              textAlignVertical="top"
+              returnKeyType="next"
+              blurOnSubmit={false}
             />
           </View>
           
@@ -76,9 +100,13 @@ export default function PlanScreen() {
             <TextInput
               style={[styles.textInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
               placeholder="What are your study goals? (e.g., Ace my midterms)"
-              placeholderTextColor={navTheme.colors.text}
+              placeholderTextColor="#9CA3AF"
               value={goals}
               onChangeText={setGoals}
+              multiline={true}
+              numberOfLines={2}
+              textAlignVertical="top"
+              returnKeyType="done"
             />
           </View>
           
@@ -113,77 +141,92 @@ export default function PlanScreen() {
           </TouchableOpacity>
         </View>
       )}
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    padding: 16,
   },
   header: {
     alignItems: 'center',
-    marginTop: 60,
-    marginBottom: 30,
+    marginTop: 8,
+    marginBottom: 20,
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  dateIcon: {
+    fontSize: 18,
+    marginRight: 6,
+  },
+  dateText: {
+    fontSize: 16,
+    fontWeight: '700',
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    fontWeight: '800',
+    marginBottom: 6,
+    letterSpacing: 0.5,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#6B7280',
     textAlign: 'center',
   },
   formContainer: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   inputSection: {
-    padding: 20,
-    borderRadius: 16,
+    padding: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    marginBottom: 20,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   textInput: {
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    minHeight: 50,
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 15,
+    minHeight: 60,
   },
   generateButton: {
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   saveButton: {
-    padding: 16,
+    padding: 15,
     borderRadius: 12,
     alignItems: 'center',
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    borderWidth: 1.5,
+    marginBottom: 16,
   },
   buttonText: {
     color: '#FFFFFF',

@@ -573,26 +573,36 @@ export default function FlashcardsScreen() {
       {/* Navigation Controls */}
       <View style={styles.controls}>
         <TouchableOpacity 
-          style={[styles.navButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+          style={[styles.navButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }, currentCardIndex === 0 && styles.disabledButton]} 
           onPress={prevCard} 
           disabled={currentCardIndex === 0}
         >
-          <Text style={[styles.navButtonText, currentCardIndex === 0 && styles.disabledText]}>◀</Text>
+          <Text style={[styles.navButtonText, currentCardIndex === 0 && styles.disabledText]}>◀️</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity 
-          style={[styles.flipButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
-          onPress={flipCard}
-        >
-          <Text style={styles.flipButtonText}>🔄</Text>
-        </TouchableOpacity>
+        <View style={styles.progressIndicator}>
+          <View style={styles.progressBar}>
+            <View 
+              style={[
+                styles.progressFill, 
+                { 
+                  width: `${((currentCardIndex + 1) / flashcards.length) * 100}%`,
+                  backgroundColor: navTheme.colors.primary || '#6366F1'
+                }
+              ]} 
+            />
+          </View>
+          <Text style={[styles.progressText, { color: navTheme.colors.text }]}>
+            {currentCardIndex + 1} / {flashcards.length}
+          </Text>
+        </View>
         
         <TouchableOpacity 
-          style={[styles.navButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+          style={[styles.navButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }, currentCardIndex === flashcards.length - 1 && styles.disabledButton]} 
           onPress={nextCard} 
           disabled={currentCardIndex === flashcards.length - 1}
         >
-          <Text style={[styles.navButtonText, currentCardIndex === flashcards.length - 1 && styles.disabledText]}>▶</Text>
+          <Text style={[styles.navButtonText, currentCardIndex === flashcards.length - 1 && styles.disabledText]}>▶️</Text>
         </TouchableOpacity>
       </View>
 
@@ -683,18 +693,20 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginTop: 60,
-    marginBottom: 30,
+    marginTop: 16,
+    marginBottom: 28,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    fontSize: 30,
+    fontWeight: '800',
+    marginBottom: 10,
+    letterSpacing: 0.5,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 17,
     color: '#6B7280',
     textAlign: 'center',
+    lineHeight: 24,
   },
   emptyContainer: {
     flex: 1,
@@ -751,15 +763,15 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
-    height: 300,
-    borderRadius: 20,
+    height: 320,
+    borderRadius: 24,
     borderWidth: 1,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
-    padding: 20,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+    padding: 24,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -770,42 +782,71 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   cardText: {
-    fontSize: 24,
-    fontWeight: '600',
+    fontSize: 26,
+    fontWeight: '700',
     textAlign: 'center',
-    lineHeight: 32,
-    marginBottom: 20,
+    lineHeight: 36,
+    marginBottom: 22,
+    letterSpacing: 0.3,
   },
   flipHint: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#9CA3AF',
     textAlign: 'center',
     fontStyle: 'italic',
+    fontWeight: '500',
   },
   controls: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: 20,
     marginBottom: 30,
   },
   navButton: {
-    padding: 16,
-    borderRadius: 16,
+    padding: 18,
+    borderRadius: 20,
     borderWidth: 1,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 5,
+    minWidth: 56,
+    alignItems: 'center',
+  },
+  disabledButton: {
+    opacity: 0.4,
   },
   navButtonText: {
-    fontSize: 20,
+    fontSize: 22,
     color: '#6366F1',
     fontWeight: 'bold',
   },
   disabledText: {
     opacity: 0.3,
+  },
+  progressIndicator: {
+    flex: 1,
+    marginHorizontal: 20,
+    alignItems: 'center',
+  },
+  progressBar: {
+    width: '100%',
+    height: 8,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  progressText: {
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   flipButton: {
     padding: 16,

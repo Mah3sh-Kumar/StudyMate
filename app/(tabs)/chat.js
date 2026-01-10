@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert, KeyboardAvoidingView, Platform, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '@react-navigation/native';
 import { getAIChatResponse } from '../../api/api';
@@ -224,28 +225,32 @@ export default function ChatScreen() {
   }, [messages]);
 
   return (
-    <KeyboardAvoidingView 
-      style={[styles.container, { backgroundColor: navTheme.colors.background }]} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: navTheme.colors.text }]}>💬 AI Chat Assistant</Text>
-        {!isAIAvailable && (
-          <View style={[styles.statusBanner, { backgroundColor: navTheme.colors.border }]}>
-            <Text style={[styles.statusText, { color: navTheme.colors.text }]}>
-              ⚠️ AI Service Unavailable - Using Fallback Mode
-            </Text>
-            <Text style={[styles.statusSubtext, { color: navTheme.colors.text }]}>
-              I'll provide helpful study tips and guidance
-            </Text>
-          </View>
-        )}
-      </View>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: navTheme.colors.card }]} edges={['top']}>
+      <KeyboardAvoidingView 
+        style={[styles.container, { backgroundColor: navTheme.colors.background }]} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <View style={[styles.header, { backgroundColor: navTheme.colors.card, borderBottomColor: navTheme.colors.border }]}>
+          <Text style={[styles.title, { color: navTheme.colors.text }]}>💬 AI Chat Assistant</Text>
+          {!isAIAvailable && (
+            <View style={[styles.statusBanner, { backgroundColor: navTheme.colors.border }]}>
+              <Text style={[styles.statusText, { color: navTheme.colors.text }]}>
+                ⚠️ AI Service Unavailable - Using Fallback Mode
+              </Text>
+              <Text style={[styles.statusSubtext, { color: navTheme.colors.text }]}>
+                I'll provide helpful study tips and guidance
+              </Text>
+            </View>
+          )}
+        </View>
 
       <ScrollView 
         ref={scrollViewRef}
         style={styles.messagesContainer}
+        contentContainerStyle={styles.messagesContentContainer}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {messages.map((message) => (
           <View 
@@ -330,34 +335,44 @@ export default function ChatScreen() {
         )}
       </View>
     </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
   },
   header: {
     alignItems: 'center',
-    paddingTop: 60,
-    paddingBottom: 20,
+    paddingTop: 0,
+    paddingBottom: 5,
     paddingHorizontal: 20,
+    borderBottomWidth: 1,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 24,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   subtitle: {
-    fontSize: 16,
-    marginTop: 8,
+    fontSize: 17,
+    marginTop: 10,
     textAlign: 'center',
   },
   messagesContainer: {
     flex: 1,
     paddingHorizontal: 20,
   },
+  messagesContentContainer: {
+    paddingTop: 16,
+    paddingBottom: 16,
+  },
   messageContainer: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   userMessage: {
     alignItems: 'flex-end',
@@ -367,20 +382,30 @@ const styles = StyleSheet.create({
   },
   messageBubble: {
     maxWidth: '80%',
-    padding: 16,
-    borderRadius: 20,
+    padding: 18,
+    borderRadius: 22,
   },
   userBubble: {
     backgroundColor: '#6366F1',
-    borderBottomRightRadius: 8,
+    borderBottomRightRadius: 6,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   aiBubble: {
-    borderBottomLeftRadius: 8,
+    borderBottomLeftRadius: 6,
     borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   messageText: {
     fontSize: 16,
-    lineHeight: 22,
+    lineHeight: 24,
   },
   userText: {
     color: '#fff',
@@ -392,14 +417,20 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 8,
     alignSelf: 'flex-end',
+    opacity: 0.7,
   },
   copyButton: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    borderRadius: 15,
-    padding: 8,
+    borderRadius: 18,
+    padding: 10,
     margin: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   copyButtonText: {
     fontSize: 20,
@@ -407,54 +438,69 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderTopWidth: 1,
   },
   textInput: {
     flex: 1,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
     fontSize: 16,
     maxHeight: 100,
     borderWidth: 1,
   },
   sendButton: {
     backgroundColor: '#6366F1',
-    padding: 12,
-    borderRadius: 20,
+    padding: 14,
+    borderRadius: 24,
     marginLeft: 12,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
   },
   sendButtonDisabled: {
     backgroundColor: '#F3F4F6',
+    shadowOpacity: 0,
   },
   sendButtonText: {
-    fontSize: 20,
+    fontSize: 22,
     color: '#fff',
   },
   typingText: {
     fontSize: 14,
+    fontStyle: 'italic',
+    opacity: 0.7,
   },
   actionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: 15,
+    paddingVertical: 12,
     paddingHorizontal: 20,
     borderTopWidth: 1,
+    paddingBottom: 8,
   },
   actionButton: {
     paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   actionButtonText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   statusBanner: {
     marginTop: 12,
-    padding: 12,
-    borderRadius: 8,
+    padding: 14,
+    borderRadius: 12,
     alignItems: 'center',
   },
   statusText: {
