@@ -1,12 +1,5 @@
 <div align="center">
 
-# 📚 StudyMate
-
-### AI-Powered Study Assistant
-
-=======
-<div align="center">
-
 # 📚 StudyMate  
 ### AI-Powered Study Assistant
 
