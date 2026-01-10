@@ -14,6 +14,7 @@ import { Link, router } from 'expo-router';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '@react-navigation/native';
 import { useEffect } from 'react';
+import { useErrorModal } from '../../components/ErrorModal';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -21,6 +22,7 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const { signIn, resetPassword, resendVerificationEmail, user } = useAuth();
   const navTheme = useTheme();
+  const { showError } = useErrorModal();
 
   useEffect(() => {
     if (user) {
@@ -30,7 +32,11 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showError({
+        title: 'Error',
+        message: 'Please fill in all fields',
+        showRetryButton: false
+      });
       return;
     }
 
@@ -42,33 +48,45 @@ export default function LoginScreen() {
       if (error) {
         const normalized = (error || '').toLowerCase();
         if (normalized.includes('email not confirmed') || normalized.includes('confirm')) {
-          Alert.alert(
-            'Verify your email',
-            'We sent you a verification link. Please verify your email before signing in.',
-            [
-              { text: 'OK' },
-              {
-                text: 'Resend link',
-                onPress: async () => {
-                  const { error: resendError } = await resendVerificationEmail(email.trim());
-                  if (resendError) {
-                    Alert.alert('Could not resend', resendError);
-                  } else {
-                    Alert.alert('Sent', 'Verification link resent. Check your inbox.');
-                  }
-                }
+          // Show main alert for email confirmation
+          showError({
+            title: 'Verify your email',
+            message: 'We sent you a verification link. Please verify your email before signing in.',
+            onRetry: async () => {
+              const { error: resendError } = await resendVerificationEmail(email.trim());
+              if (resendError) {
+                showError({
+                  title: 'Could not resend',
+                  message: resendError,
+                  showRetryButton: false
+                });
+              } else {
+                showError({
+                  title: 'Sent',
+                  message: 'Verification link resent. Check your inbox.',
+                  showRetryButton: false
+                });
               }
-            ]
-          );
+            },
+            showRetryButton: true
+          });
         } else {
-          Alert.alert('Login Failed', error);
+          showError({
+            title: 'Login Failed',
+            message: error,
+            showRetryButton: false
+          });
         }
       } else {
         // Successfully logged in, navigate to main app
         router.replace('/(tabs)');
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred');
+      showError({
+        title: 'Error',
+        message: 'An unexpected error occurred',
+        showRetryButton: false
+      });
     } finally {
       setLoading(false);
     }
@@ -77,19 +95,35 @@ export default function LoginScreen() {
   const handleForgotPassword = async () => {
     const emailToUse = email.trim();
     if (!emailToUse) {
-      Alert.alert('Forgot Password', 'Enter your email above first.');
+      showError({
+        title: 'Forgot Password',
+        message: 'Enter your email above first.',
+        showRetryButton: false
+      });
       return;
     }
     setLoading(true);
     try {
       const { error } = await resetPassword(emailToUse);
       if (error) {
-        Alert.alert('Reset Failed', error);
+        showError({
+          title: 'Reset Failed',
+          message: error,
+          showRetryButton: false
+        });
       } else {
-        Alert.alert('Check your inbox', 'We sent a password reset link to your email.');
+        showError({
+          title: 'Check your inbox',
+          message: 'We sent a password reset link to your email.',
+          showRetryButton: false
+        });
       }
     } catch (_e) {
-      Alert.alert('Error', 'Unable to send reset email right now.');
+      showError({
+        title: 'Error',
+        message: 'Unable to send reset email right now.',
+        showRetryButton: false
+      });
     } finally {
       setLoading(false);
     }

@@ -3,10 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, FlatList, Alert } 
 import { useTheme } from '@react-navigation/native';
 import { studyGroupService } from '../../lib/database';
 import { useAuth } from '../../contexts/AuthContext';
+import { useErrorModal } from '../../components/ErrorModal';
 
 export default function GroupsScreen() {
   const navTheme = useTheme();
   const { user } = useAuth();
+  const { showError } = useErrorModal();
   const [activeTab, setActiveTab] = useState('myGroups');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -68,7 +70,11 @@ export default function GroupsScreen() {
       }
     } catch (error) {
       console.error('Error loading groups:', error);
-      Alert.alert('❌ Error', 'Failed to load study groups');
+      showError({
+        title: '❌ Error',
+        message: 'Failed to load study groups',
+        showRetryButton: false
+      });
     } finally {
       setLoading(false);
     }
@@ -77,35 +83,51 @@ export default function GroupsScreen() {
   // Create new study group
   const createGroup = async () => {
     if (!newGroupName.trim() || !newGroupSubject.trim()) {
-      Alert.alert('❌ Error', 'Please fill in both group name and subject');
+      showError({
+        title: '❌ Error',
+        message: 'Please fill in both group name and subject',
+        showRetryButton: false
+      });
       return;
     }
     
     try {
       const { data, error } = await studyGroupService.createGroup(user.id, {
-      name: newGroupName.trim(),
-      subject: newGroupSubject.trim(),
+        name: newGroupName.trim(),
+        subject: newGroupSubject.trim(),
         description: newGroupDescription.trim() || `Study group for ${newGroupSubject.trim()}`,
         isPublic: true,
         tags: [newGroupSubject.trim()]
       });
       
       if (error) {
-        Alert.alert('❌ Error', 'Failed to create group');
+        showError({
+          title: '❌ Error',
+          message: 'Failed to create group',
+          showRetryButton: false
+        });
         return;
       }
       
       // Refresh groups
       await loadGroups();
       
-      Alert.alert('✅ Success', 'Group created successfully!');
-    setShowCreateGroup(false);
-    setNewGroupName('');
-    setNewGroupSubject('');
+      showError({
+        title: '✅ Success',
+        message: 'Group created successfully!',
+        showRetryButton: false
+      });
+      setShowCreateGroup(false);
+      setNewGroupName('');
+      setNewGroupSubject('');
       setNewGroupDescription('');
     } catch (error) {
       console.error('Error creating group:', error);
-      Alert.alert('❌ Error', 'Failed to create group');
+      showError({
+        title: '❌ Error',
+        message: 'Failed to create group',
+        showRetryButton: false
+      });
     }
   };
 
@@ -115,86 +137,112 @@ export default function GroupsScreen() {
       const { error } = await studyGroupService.addMember(group.id, user.id, 'member');
       
       if (error) {
-        Alert.alert('❌ Error', 'Failed to join group');
+        showError({
+          title: '❌ Error',
+          message: 'Failed to join group',
+          showRetryButton: false
+        });
         return;
       }
       
       // Refresh groups
       await loadGroups();
       
-      Alert.alert('✅ Success', `You've joined ${group.name}!`);
+      showError({
+        title: '✅ Success',
+        message: `You've joined ${group.name}!`,
+        showRetryButton: false
+      });
     } catch (error) {
       console.error('Error joining group:', error);
-      Alert.alert('❌ Error', 'Failed to join group');
+      showError({
+        title: '❌ Error',
+        message: 'Failed to join group',
+        showRetryButton: false
+      });
     }
   };
 
   // Leave a group
   const leaveGroup = async (group) => {
-    Alert.alert(
-      '🚪 Leave Group',
-      `Are you sure you want to leave "${group.name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Leave',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const { error } = await studyGroupService.removeMember(group.id, user.id);
-              
-              if (error) {
-                Alert.alert('❌ Error', 'Failed to leave group');
-                return;
-              }
-              
-              // Refresh groups
-              await loadGroups();
-              
-              Alert.alert('✅ Success', `You've left ${group.name}`);
-            } catch (error) {
-              console.error('Error leaving group:', error);
-              Alert.alert('❌ Error', 'Failed to leave group');
-            }
+    // Replace Alert.alert with error modal
+    showError({
+      title: '🚪 Leave Group',
+      message: `Are you sure you want to leave "${group.name}"?`,
+      onRetry: async () => {
+        try {
+          const { error } = await studyGroupService.removeMember(group.id, user.id);
+          
+          if (error) {
+            showError({
+              title: '❌ Error',
+              message: 'Failed to leave group',
+              showRetryButton: false
+            });
+            return;
           }
+          
+          // Refresh groups
+          await loadGroups();
+          
+          showError({
+            title: '✅ Success',
+            message: `You've left ${group.name}`,
+            showRetryButton: false
+          });
+        } catch (error) {
+          console.error('Error leaving group:', error);
+          showError({
+            title: '❌ Error',
+            message: 'Failed to leave group',
+            showRetryButton: false
+          });
         }
-      ]
-    );
+      },
+      showRetryButton: true
+    });
   };
 
   // Delete a group (only for group creators)
   const deleteGroup = async (group) => {
-    Alert.alert(
-      '🗑️ Delete Group',
-      `Are you sure you want to delete "${group.name}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // Note: This would require adding a deleteGroup method to studyGroupService
-              // For now, we'll just remove the user from the group
-              const { error } = await studyGroupService.removeMember(group.id, user.id);
-              
-              if (error) {
-                Alert.alert('❌ Error', 'Failed to delete group');
-                return;
-              }
-              
-              // Refresh groups
-              await loadGroups();
-              
-              Alert.alert('✅ Success', `Group "${group.name}" has been removed`);
-            } catch (error) {
-              console.error('Error deleting group:', error);
-              Alert.alert('❌ Error', 'Failed to delete group');
-            }
+    // Replace Alert.alert with error modal
+    showError({
+      title: '🗑️ Delete Group',
+      message: `Are you sure you want to delete "${group.name}"? This action cannot be undone.`,
+      onRetry: async () => {
+        try {
+          // Note: This would require adding a deleteGroup method to studyGroupService
+          // For now, we'll just remove the user from the group
+          const { error } = await studyGroupService.removeMember(group.id, user.id);
+          
+          if (error) {
+            showError({
+              title: '❌ Error',
+              message: 'Failed to delete group',
+              showRetryButton: false
+            });
+            return;
           }
+          
+          // Refresh groups
+          await loadGroups();
+          
+          showError({
+            title: '✅ Success',
+            message: `Group "${group.name}" has been removed`,
+            showRetryButton: false
+          });
+        } catch (error) {
+          console.error('Error deleting group:', error);
+          showError({
+            title: '❌ Error',
+            message: 'Failed to delete group',
+            showRetryButton: false
+          });
         }
-      ]
-    );
+      },
+      showRetryButton: true
+    });
   };
 
   // Search groups

@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import { useTheme } from '@react-navigation/native';
 import { getAIChatResponse } from '../../api/api';
+import { useErrorModal } from '../../components/ErrorModal';
 
 export default function ChatScreen() {
   const navTheme = useTheme();
@@ -23,6 +24,7 @@ export default function ChatScreen() {
   const [contentHeight, setContentHeight] = useState(0);
   const [textInputFocused, setTextInputFocused] = useState(false);
   const scrollViewRef = useRef();
+  const { showError } = useErrorModal();
 
   // Function to group messages by sender
   const groupMessages = () => {
@@ -177,35 +179,40 @@ export default function ChatScreen() {
   };
 
   const clearChat = () => {
-    Alert.alert(
-      'Clear Chat',
-      'Are you sure you want to clear all messages?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: () => {
-            setMessages([{
-              id: Date.now(),
-              text: "Hello! I'm your AI study assistant. How can I help you today?",
-              isUser: false,
-              timestamp: new Date().toLocaleTimeString()
-            }]);
-            // Reset AI availability when clearing chat
-            setIsAIAvailable(true);
-          }
-        }
-      ]
-    );
+    // Replace Alert.alert with error modal
+    showError({
+      title: 'Clear Chat',
+      message: 'Are you sure you want to clear all messages?',
+      onRetry: () => {
+        setMessages([{
+          id: Date.now(),
+          text: "Hello! I'm your AI study assistant. How can I help you today?",
+          isUser: false,
+          timestamp: new Date().toLocaleTimeString()
+        }]);
+        // Reset AI availability when clearing chat
+        setIsAIAvailable(true);
+      },
+      showRetryButton: true
+    });
   };
 
   const copyMessage = async (messageText) => {
     try {
       await Clipboard.setStringAsync(messageText);
-      Alert.alert('Copied!', 'Message copied to clipboard');
-    } catch {
-      Alert.alert('Error', 'Failed to copy');
+      // Replace Alert.alert with error modal for success
+      showError({
+        title: 'Copied!',
+        message: 'Message copied to clipboard',
+        showRetryButton: false
+      });
+    } catch (error) {
+      // Replace Alert.alert with error modal for error
+      showError({
+        title: 'Error',
+        message: 'Failed to copy message to clipboard',
+        showRetryButton: false
+      });
     }
   };
 
@@ -213,9 +220,19 @@ export default function ChatScreen() {
     const chatText = messages.map(msg => `${msg.isUser ? 'You' : 'AI'}: ${msg.text}`).join('\n\n');
     try {
       await Clipboard.setStringAsync(chatText);
-      Alert.alert('Share Chat', 'Chat history copied to clipboard');
-    } catch {
-      Alert.alert('Error', 'Failed to copy');
+      // Replace Alert.alert with error modal for success
+      showError({
+        title: 'Share Chat',
+        message: 'Chat history copied to clipboard',
+        showRetryButton: false
+      });
+    } catch (error) {
+      // Replace Alert.alert with error modal for error
+      showError({
+        title: 'Error',
+        message: 'Failed to copy chat history',
+        showRetryButton: false
+      });
     }
   };
 
@@ -228,38 +245,32 @@ export default function ChatScreen() {
       "What are effective note-taking strategies?"
     ];
 
-    Alert.alert(
-      'Suggested Questions',
-      'Try asking me one of these:',
-      [
-        ...suggestions.map(q => ({ text: q, onPress: () => setInputText(q) })),
-        { text: 'Cancel', style: 'cancel' }
-      ]
-    );
+    // Replace Alert.alert with error modal
+    showError({
+      title: 'Suggested Questions',
+      message: 'Try asking me one of these:',
+      showRetryButton: false
+    });
   };
 
   const resetAIService = () => {
-    Alert.alert(
-      'Reset AI Service',
-      'This will attempt to reconnect to the AI service. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          onPress: () => {
-            setIsAIAvailable(true);
-            const resetMessage = {
-              id: Date.now(),
-              text: "🔄 AI service has been reset. I'll try to use the AI assistant again for your next message.",
-              isUser: false,
-              timestamp: new Date().toLocaleTimeString(),
-              messageType: 'system'  // Add system message type
-            };
-            setMessages(prev => [...prev, resetMessage]);
-          }
-        }
-      ]
-    );
+    // Replace Alert.alert with error modal
+    showError({
+      title: 'Reset AI Service',
+      message: 'This will attempt to reconnect to the AI service. Continue?',
+      onRetry: () => {
+        setIsAIAvailable(true);
+        const resetMessage = {
+          id: Date.now(),
+          text: "🔄 AI service has been reset. I'll try to use the AI assistant again for your next message.",
+          isUser: false,
+          timestamp: new Date().toLocaleTimeString(),
+          messageType: 'system'  // Add system message type
+        };
+        setMessages(prev => [...prev, resetMessage]);
+      },
+      showRetryButton: true
+    });
   };
 
   // Smart auto-scroll to bottom only if user is near the bottom

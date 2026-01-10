@@ -1,4 +1,5 @@
 import { API_CONFIG, getConfig, validateConfig, getModelConfig, getAIPromptConfig } from '../config/api-config.js';
+import { handleAPIError } from '../utils/errorHandler';
 
 // Validate configuration on import
 if (!validateConfig()) {
@@ -127,7 +128,11 @@ export const getAIChatResponse = async (messages) => {
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        handleOpenAIError(response, errorData);
+        handleOpenAIError(response, {
+          url: `${API_URL}/chat/completions`,
+          method: 'POST',
+          ...errorData
+        });
       }
       
       const data = await response.json();
@@ -135,10 +140,17 @@ export const getAIChatResponse = async (messages) => {
     } catch (error) {
       console.error("Error getting AI chat response:", error);
       
-      // Don't expose raw error messages
-      if (error.message.includes('rate limit')) {
+      // Use centralized error handling
+      const normalizedError = handleAPIError(error, {
+        url: `${API_URL}/chat/completions`,
+        method: 'POST',
+        purpose: 'AI Chat Response'
+      });
+      
+      // Don't expose raw error messages to users
+      if (normalizedError.technicalMessage.includes('rate limit')) {
         throw new Error("Too many requests. Please wait a moment and try again.");
-      } else if (error.message.includes('authentication')) {
+      } else if (normalizedError.technicalMessage.includes('authentication') || normalizedError.technicalMessage.includes('401')) {
         throw new Error("Authentication failed. Please check your API configuration.");
       } else {
         throw new Error("Sorry, I couldn't connect to the AI assistant right now. Please try again later.");
@@ -192,13 +204,26 @@ export const summarizeTextWithOpenAI = async (textToSummarize) => {
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      handleOpenAIError(response, errorData);
+      handleOpenAIError(response, {
+        url: `${API_URL}/chat/completions`,
+        method: 'POST',
+        purpose: 'Text Summarization',
+        ...errorData
+      });
     }
     
     const data = await response.json();
     return data.choices[0].message.content;
   } catch (error) {
     console.error("Error summarizing text:", error);
+    
+    // Use centralized error handling
+    handleAPIError(error, {
+      url: `${API_URL}/chat/completions`,
+      method: 'POST',
+      purpose: 'Text Summarization'
+    });
+    
     // Don't expose raw error messages
     throw new Error("Failed to summarize text. Please try again.");
   }
@@ -246,7 +271,12 @@ export const generateQuizWithOpenAI = async (contextText) => {
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      handleOpenAIError(response, errorData);
+      handleOpenAIError(response, {
+        url: `${API_URL}/chat/completions`,
+        method: 'POST',
+        purpose: 'Quiz Generation',
+        ...errorData
+      });
     }
     
     const data = await response.json();
@@ -260,6 +290,14 @@ export const generateQuizWithOpenAI = async (contextText) => {
     return quizData;
   } catch (error) {
     console.error("Error generating quiz:", error);
+    
+    // Use centralized error handling
+    handleAPIError(error, {
+      url: `${API_URL}/chat/completions`,
+      method: 'POST',
+      purpose: 'Quiz Generation'
+    });
+    
     // Don't expose raw error messages
     throw new Error("Failed to generate quiz. Please try again.");
   }
@@ -302,13 +340,26 @@ export const generateImageWithOpenAI = async (prompt, options = {}) => {
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(`API request failed: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+      handleAPIError(response, {
+        url: `${API_URL}/images/generations`,
+        method: 'POST',
+        purpose: 'Image Generation',
+        ...errorData
+      });
     }
     
     const data = await response.json();
     return data.data[0].url;
   } catch (error) {
     console.error("Error generating image:", error);
+    
+    // Use centralized error handling
+    handleAPIError(error, {
+      url: `${API_URL}/images/generations`,
+      method: 'POST',
+      purpose: 'Image Generation'
+    });
+    
     throw new Error("Failed to generate image. Please try again.");
   }
 };
@@ -355,7 +406,12 @@ export const generateFlashcardsWithOpenAI = async (studyMaterial) => {
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      handleOpenAIError(response, errorData);
+      handleOpenAIError(response, {
+        url: `${API_URL}/chat/completions`,
+        method: 'POST',
+        purpose: 'Flashcard Generation',
+        ...errorData
+      });
     }
     
     const data = await response.json();
@@ -368,6 +424,14 @@ export const generateFlashcardsWithOpenAI = async (studyMaterial) => {
     return flashcardData.flashcards;
   } catch (error) {
     console.error("Error generating flashcards:", error);
+    
+    // Use centralized error handling
+    handleAPIError(error, {
+      url: `${API_URL}/chat/completions`,
+      method: 'POST',
+      purpose: 'Flashcard Generation'
+    });
+    
     // Don't expose raw error messages
     throw new Error("Failed to generate flashcards. Please try again.");
   }
@@ -408,13 +472,26 @@ export const transcribeAudioWithOpenAI = async (audioFile, options = {}) => {
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(`API request failed: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+      handleAPIError(response, {
+        url: `${API_URL}/audio/transcriptions`,
+        method: 'POST',
+        purpose: 'Audio Transcription',
+        ...errorData
+      });
     }
     
     const data = await response.json();
     return data.text;
   } catch (error) {
     console.error("Error transcribing audio:", error);
+    
+    // Use centralized error handling
+    handleAPIError(error, {
+      url: `${API_URL}/audio/transcriptions`,
+      method: 'POST',
+      purpose: 'Audio Transcription'
+    });
+    
     throw new Error("Failed to transcribe audio. Please try again.");
   }
 };

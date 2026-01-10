@@ -5,17 +5,24 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Menu, Home, MessageCircle, Users, Mic, BookOpen, Target, ClipboardCheck, Timer, Settings, FileText, Layers } from 'lucide-react-native';
+import { LogBox } from 'react-native';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthProvider } from '../contexts/AuthContext';
 import { ThemeProviderCustom, useThemePreference } from '../contexts/ThemeContext';
+import { ErrorModalProvider } from '../components/ErrorModal';
+
+// Disable all LogBox warnings in the app
+LogBox.ignoreAllLogs(true);
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   return (
     <AuthProvider>
       <ThemeProviderCustom>
-        <InnerNavigator fallbackScheme={colorScheme} />
+        <ErrorModalProvider>
+          <InnerNavigator fallbackScheme={colorScheme} />
+        </ErrorModalProvider>
       </ThemeProviderCustom>
     </AuthProvider>
   );
