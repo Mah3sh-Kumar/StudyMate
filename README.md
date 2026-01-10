@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-
 <div align="center">
 
 # 📚 StudyMate
@@ -12,7 +10,6 @@
 # 📚 StudyMate  
 ### AI-Powered Study Assistant
 
->>>>>>> b991ead06806b9095c05bdd70dea2c5cd4d508ae
 **Supercharge Your Learning with Intelligent Tools**
 
 A modern, cross-platform mobile application that leverages AI to deliver intelligent content summarization, quiz generation, flashcards, and personalized learning schedules.
