@@ -46,6 +46,14 @@ module.exports = ({ config }) => {
           resizeMode: "contain",
           backgroundColor: "#ffffff"
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableJetifier": true
+          }
+        }
       ]
     ],
     experiments: {
