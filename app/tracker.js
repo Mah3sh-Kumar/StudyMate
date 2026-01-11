@@ -32,18 +32,18 @@ export default function TrackerScreen() {
     try {
       setLoading(true);
       const { data, error } = await studySessionService.getUserSessions(user.id, 100);
-      
+
       if (error) {
         console.error('Error loading study sessions:', error);
         Alert.alert('❌ Error', 'Failed to load study sessions');
         return;
       }
-      
+
       setSessions(data || []);
-      
+
       // Calculate total study time
       const total = (data || []).reduce((sum, session) => sum + (session.duration_minutes || 0), 0);
-    setTotalStudyTime(total);
+      setTotalStudyTime(total);
     } catch (error) {
       console.error('Error loading study sessions:', error);
       Alert.alert('❌ Error', 'Failed to load study sessions');
@@ -70,32 +70,59 @@ export default function TrackerScreen() {
       return;
     }
 
-    // Mock session creation
-    const mockSession = {
-      id: Date.now().toString(),
-      subject: sessionSubject.trim(),
-      startTime: new Date(),
-      notes: sessionNotes,
-    };
+    try {
+      const { data, error } = await studySessionService.startSession(user.id, {
+        subject: sessionSubject.trim(),
+        tags: []
+      });
 
-    setCurrentSession(mockSession);
-    setIsTracking(true);
-    setSessionTimer(0);
-    setShowSessionForm(false);
-    setSessionSubject('');
-    setSessionNotes('');
-    Alert.alert('🚀 Session Started', `Study session for ${sessionSubject.trim()} has begun!`);
+      if (error) {
+        Alert.alert('❌ Error', 'Failed to start session');
+        return;
+      }
+
+      setCurrentSession(data);
+      setIsTracking(true);
+      setSessionTimer(0);
+      setShowSessionForm(false);
+      setSessionSubject('');
+      setSessionNotes('');
+      Alert.alert('🚀 Session Started', `Study session for ${data.subject} has begun!`);
+    } catch (error) {
+      console.error('Error starting session:', error);
+      Alert.alert('❌ Error', 'Failed to start session');
+    }
   };
 
-  // Mock stop session logic
+  // Stop session logic
   const stopSession = async () => {
     if (!currentSession) return;
-    setCurrentSession(null);
-    setIsTracking(false);
-    setSessionTimer(0);
-    setSessionNotes('');
-    setIsPaused(false);
-    Alert.alert('✅ Session Complete', 'Session stopped!');
+
+    try {
+      const { error } = await studySessionService.endSession(currentSession.id, sessionNotes);
+
+      if (error) {
+        Alert.alert('❌ Error', 'Failed to save session');
+        return;
+      }
+
+      // Add to local list immediately
+      setSessions(prev => [currentSession, ...prev]);
+
+      setCurrentSession(null);
+      setIsTracking(false);
+      setSessionTimer(0);
+      setSessionNotes('');
+      setIsPaused(false);
+
+      // Reload to get calculated duration correctly from server
+      loadStudySessions();
+
+      Alert.alert('✅ Session Complete', 'Session saved successfully!');
+    } catch (error) {
+      console.error('Error stopping session:', error);
+      Alert.alert('❌ Error', 'Failed to stop session');
+    }
   };
 
   // Pause/resume session logic
@@ -131,7 +158,7 @@ export default function TrackerScreen() {
             try {
               // Note: This would require adding a deleteSession method to studySessionService
               // For now, we'll just remove it from the local state
-            setSessions(prev => prev.filter(s => s.id !== session.id));
+              setSessions(prev => prev.filter(s => s.id !== session.id));
               setTotalStudyTime(prev => prev - (session.duration_minutes || 0));
               Alert.alert('✅ Success', 'Session deleted');
             } catch (error) {
@@ -148,12 +175,12 @@ export default function TrackerScreen() {
   const getStudyStats = async () => {
     try {
       const { data, error } = await studySessionService.getStudyStats(user.id);
-      
+
       if (error) {
         console.error('Error loading study stats:', error);
         return null;
       }
-      
+
       return data;
     } catch (error) {
       console.error('Error loading study stats:', error);
@@ -166,7 +193,7 @@ export default function TrackerScreen() {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
+
     if (hours > 0) {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
@@ -197,7 +224,7 @@ export default function TrackerScreen() {
   const getPeriodData = () => {
     const now = new Date();
     const today = now.toISOString().split('T')[0];
-    
+
     switch (selectedPeriod) {
       case 'today':
         return sessions.filter(s => s.start_time?.split('T')[0] === today);
@@ -216,7 +243,7 @@ export default function TrackerScreen() {
   const getSubjectStats = () => {
     const periodSessions = getPeriodData();
     const stats = {};
-    
+
     periodSessions.forEach(session => {
       if (stats[session.subject]) {
         stats[session.subject] += session.duration_minutes || 0;
@@ -224,7 +251,7 @@ export default function TrackerScreen() {
         stats[session.subject] = session.duration_minutes || 0;
       }
     });
-    
+
     return Object.entries(stats)
       .map(([subject, duration]) => ({ subject, duration }))
       .sort((a, b) => b.duration - a.duration);
@@ -284,7 +311,7 @@ export default function TrackerScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modal, { backgroundColor: navTheme.colors.card }]}>
             <Text style={[styles.modalTitle, { color: navTheme.colors.text }]}>Start Study Session</Text>
-            
+
             <TextInput
               style={[styles.modalInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
               placeholder="Subject (e.g., Math, Biology)"
@@ -292,7 +319,7 @@ export default function TrackerScreen() {
               value={sessionSubject}
               onChangeText={setSessionSubject}
             />
-            
+
             <TextInput
               style={[styles.modalInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
               placeholder="Notes (optional)"
@@ -302,16 +329,16 @@ export default function TrackerScreen() {
               multiline
               numberOfLines={3}
             />
-            
+
             <View style={styles.modalActions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.cancelButton, { backgroundColor: navTheme.colors.border }]}
                 onPress={() => setShowSessionForm(false)}
               >
                 <Text style={[styles.cancelText, { color: navTheme.colors.text }]}>Cancel</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.confirmButton}
                 onPress={startSession}
               >
@@ -324,26 +351,26 @@ export default function TrackerScreen() {
 
       {/* Period Selector */}
       <View style={[styles.periodSelector, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
-        <TouchableOpacity 
-          style={[styles.periodTab, selectedPeriod === 'today' && styles.activePeriodTab]} 
+        <TouchableOpacity
+          style={[styles.periodTab, selectedPeriod === 'today' && styles.activePeriodTab]}
           onPress={() => setSelectedPeriod('today')}
         >
           <Text style={[styles.periodText, selectedPeriod === 'today' && styles.activePeriodText]}>Today</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.periodTab, selectedPeriod === 'week' && styles.activePeriodTab]} 
+        <TouchableOpacity
+          style={[styles.periodTab, selectedPeriod === 'week' && styles.activePeriodTab]}
           onPress={() => setSelectedPeriod('week')}
         >
           <Text style={[styles.periodText, selectedPeriod === 'week' && styles.activePeriodText]}>Week</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.periodTab, selectedPeriod === 'month' && styles.activePeriodTab]} 
+        <TouchableOpacity
+          style={[styles.periodTab, selectedPeriod === 'month' && styles.activePeriodTab]}
           onPress={() => setSelectedPeriod('month')}
         >
           <Text style={[styles.periodText, selectedPeriod === 'month' && styles.activePeriodText]}>Month</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.periodTab, selectedPeriod === 'all' && styles.activePeriodTab]} 
+        <TouchableOpacity
+          style={[styles.periodTab, selectedPeriod === 'all' && styles.activePeriodTab]}
           onPress={() => setSelectedPeriod('all')}
         >
           <Text style={[styles.periodText, selectedPeriod === 'all' && styles.activePeriodText]}>All Time</Text>
@@ -357,13 +384,13 @@ export default function TrackerScreen() {
           <Text style={[styles.statValue, { color: navTheme.colors.text }]}>{formatTime(periodTotal)}</Text>
           <Text style={styles.statPeriod}>{selectedPeriod.charAt(0).toUpperCase() + selectedPeriod.slice(1)}</Text>
         </View>
-        
+
         <View style={[styles.statCard, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
           <Text style={styles.statLabel}>Sessions</Text>
           <Text style={[styles.statValue, { color: navTheme.colors.text }]}>{periodSessions.length}</Text>
           <Text style={styles.statPeriod}>Completed</Text>
         </View>
-        
+
         <View style={[styles.statCard, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
           <Text style={styles.statLabel}>Average</Text>
           <Text style={[styles.statValue, { color: navTheme.colors.text }]}>
@@ -383,11 +410,11 @@ export default function TrackerScreen() {
               <Text style={styles.subjectTime}>{formatTime(stat.duration)}</Text>
             </View>
             <View style={styles.subjectBar}>
-              <View 
+              <View
                 style={[
-                  styles.subjectProgress, 
+                  styles.subjectProgress,
                   { width: `${(stat.duration / periodTotal) * 100}%` }
-                ]} 
+                ]}
               />
             </View>
           </View>
@@ -404,14 +431,14 @@ export default function TrackerScreen() {
         </View>
         {periodSessions.slice(0, 5).map((session) => (
           <View key={session.id} style={[styles.sessionItem, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
-                         <View style={styles.sessionInfo}>
-               <Text style={[styles.sessionSubject, { color: navTheme.colors.text }]}>{session.subject}</Text>
-               <Text style={[styles.sessionDate, { color: navTheme.colors.text }]}>
-                 {new Date(session.start_time).toLocaleDateString()} at {new Date(session.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-               </Text>
-             </View>
-             <View style={styles.sessionActions}>
-               <Text style={styles.sessionDuration}>{formatTime(session.duration_minutes * 60)}</Text>
+            <View style={styles.sessionInfo}>
+              <Text style={[styles.sessionSubject, { color: navTheme.colors.text }]}>{session.subject}</Text>
+              <Text style={[styles.sessionDate, { color: navTheme.colors.text }]}>
+                {new Date(session.start_time).toLocaleDateString()} at {new Date(session.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </Text>
+            </View>
+            <View style={styles.sessionActions}>
+              <Text style={styles.sessionDuration}>{formatTime(session.duration_minutes * 60)}</Text>
               <TouchableOpacity style={styles.editButton} onPress={() => editSession(session)}>
                 <Text style={styles.editText}>✏️</Text>
               </TouchableOpacity>
@@ -426,7 +453,7 @@ export default function TrackerScreen() {
       {/* Goals and Insights */}
       <View style={styles.insightsSection}>
         <Text style={styles.sectionTitle}>🎯 Insights & Goals</Text>
-        
+
         <View style={[styles.insightCard, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
           <Text style={styles.insightIcon}>📈</Text>
           <View style={styles.insightContent}>
@@ -435,16 +462,16 @@ export default function TrackerScreen() {
               You're {Math.round((periodTotal / 240) * 100)}% to your daily goal of 4 hours
             </Text>
             <View style={styles.goalBar}>
-              <View 
+              <View
                 style={[
-                  styles.goalProgress, 
+                  styles.goalProgress,
                   { width: `${Math.min((periodTotal / 240) * 100, 100)}%` }
-                ]} 
+                ]}
               />
             </View>
           </View>
         </View>
-        
+
         <View style={[styles.insightCard, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
           <Text style={styles.insightIcon}>⏰</Text>
           <View style={styles.insightContent}>
@@ -454,7 +481,7 @@ export default function TrackerScreen() {
             </Text>
           </View>
         </View>
-        
+
         <View style={[styles.insightCard, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
           <Text style={styles.insightIcon}>🎓</Text>
           <View style={styles.insightContent}>

@@ -2,41 +2,45 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, FlatList, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { useTheme } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
+import { generateStudyPlanWithAI } from '../api/api';
 
-// Mock data for a generated plan
-const mockPlan = [
-  { id: '1', time: '9:00 AM - 10:30 AM', subject: 'Biology', task: 'Review Chapter 3: Cell Division', completed: true },
-  { id: '2', time: '11:00 AM - 12:00 PM', subject: 'Calculus', task: 'Practice problems on derivatives', completed: false },
-  { id: '3', time: '2:00 PM - 3:30 PM', subject: 'History', task: 'Read about the Renaissance period', completed: false },
-];
+
+
 
 export default function PlanScreen() {
   const navTheme = useTheme();
   const [subjects, setSubjects] = useState('');
   const [goals, setGoals] = useState('');
   const [plan, setPlan] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   const { updateStudyPreferences } = useAuth();
-  
+
   // Get current date
   const getCurrentDate = () => {
     const date = new Date();
     const options = { month: 'short', day: 'numeric' };
     return date.toLocaleDateString('en-US', options);
   };
-  
+
   const currentDate = getCurrentDate();
 
-  const handleGeneratePlan = () => {
+  const handleGeneratePlan = async () => {
     if (!subjects.trim() || !goals.trim()) {
       Alert.alert('Error', 'Please fill in both subjects and goals');
       return;
     }
-    
-    // In a real app, you would call your OpenAI API here with subjects and goals.
-    // For now, we'll use mock data after a short delay.
-    setTimeout(() => {
-      setPlan(mockPlan);
-    }, 1000);
+
+    setIsGenerating(true);
+
+    try {
+      const aiPlan = await generateStudyPlanWithAI(subjects, goals);
+      setPlan(aiPlan);
+    } catch (error) {
+      console.error('Error generating plan:', error);
+      Alert.alert('Error', 'Failed to generate study plan. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleSavePreferences = async () => {
@@ -58,13 +62,13 @@ export default function PlanScreen() {
   );
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
-      <ScrollView 
-        style={[styles.container, { backgroundColor: navTheme.colors.background }]} 
+      <ScrollView
+        style={[styles.container, { backgroundColor: navTheme.colors.background }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -77,70 +81,71 @@ export default function PlanScreen() {
           <Text style={[styles.subtitle, { color: navTheme.colors.text }]}>Create personalized study schedules</Text>
         </View>
 
-      {!plan ? (
-        <View style={styles.formContainer}>
-          <View style={[styles.inputSection, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
-            <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>📚 Subjects</Text>
-            <TextInput
-              style={[styles.textInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
-              placeholder="Enter your subjects (e.g., Math, History, Biology)"
-              placeholderTextColor="#9CA3AF"
-              value={subjects}
-              onChangeText={setSubjects}
-              multiline={true}
-              numberOfLines={2}
-              textAlignVertical="top"
-              returnKeyType="next"
-              blurOnSubmit={false}
-            />
+        {!plan ? (
+          <View style={styles.formContainer}>
+            <View style={[styles.inputSection, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
+              <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>📚 Subjects</Text>
+              <TextInput
+                style={[styles.textInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+                placeholder="Enter your subjects (e.g., Math, History, Biology)"
+                placeholderTextColor="#9CA3AF"
+                value={subjects}
+                onChangeText={setSubjects}
+                multiline={true}
+                numberOfLines={2}
+                textAlignVertical="top"
+                returnKeyType="next"
+                blurOnSubmit={false}
+              />
+            </View>
+
+            <View style={[styles.inputSection, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
+              <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>🎯 Goals</Text>
+              <TextInput
+                style={[styles.textInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
+                placeholder="What are your study goals? (e.g., Ace my midterms)"
+                placeholderTextColor="#9CA3AF"
+                value={goals}
+                onChangeText={setGoals}
+                multiline={true}
+                numberOfLines={2}
+                textAlignVertical="top"
+                returnKeyType="done"
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.generateButton, { backgroundColor: navTheme.colors.primary || '#6366F1' }]}
+              onPress={handleGeneratePlan}
+              disabled={isGenerating}
+            >
+              <Text style={styles.buttonText}>{isGenerating ? '🔄 Generating...' : '🚀 Generate Plan'}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.saveButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}
+              onPress={handleSavePreferences}
+            >
+              <Text style={[styles.saveButtonText, { color: navTheme.colors.text }]}>💾 Save Preferences</Text>
+            </TouchableOpacity>
           </View>
-          
-          <View style={[styles.inputSection, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}>
-            <Text style={[styles.sectionTitle, { color: navTheme.colors.text }]}>🎯 Goals</Text>
-            <TextInput
-              style={[styles.textInput, { backgroundColor: navTheme.colors.background, color: navTheme.colors.text, borderColor: navTheme.colors.border }]}
-              placeholder="What are your study goals? (e.g., Ace my midterms)"
-              placeholderTextColor="#9CA3AF"
-              value={goals}
-              onChangeText={setGoals}
-              multiline={true}
-              numberOfLines={2}
-              textAlignVertical="top"
-              returnKeyType="done"
+        ) : (
+          <View style={styles.planContainer}>
+            <Text style={[styles.planTitle, { color: navTheme.colors.text }]}>Your Study Plan for Today</Text>
+            <FlatList
+              data={plan}
+              renderItem={renderPlanItem}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
             />
+            <TouchableOpacity
+              style={[styles.regenerateButton, { backgroundColor: navTheme.colors.primary || '#6366F1' }]}
+              onPress={() => setPlan(null)}
+            >
+              <Text style={styles.regenerateButtonText}>🔄 Create New Plan</Text>
+            </TouchableOpacity>
           </View>
-          
-          <TouchableOpacity 
-            style={[styles.generateButton, { backgroundColor: navTheme.colors.primary || '#6366F1' }]} 
-            onPress={handleGeneratePlan}
-          >
-            <Text style={styles.buttonText}>🚀 Generate Plan</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.saveButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
-            onPress={handleSavePreferences}
-          >
-            <Text style={[styles.saveButtonText, { color: navTheme.colors.text }]}>💾 Save Preferences</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={styles.planContainer}>
-          <Text style={[styles.planTitle, { color: navTheme.colors.text }]}>Your Study Plan for Today</Text>
-          <FlatList
-            data={plan}
-            renderItem={renderPlanItem}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-          />
-          <TouchableOpacity 
-            style={[styles.regenerateButton, { backgroundColor: navTheme.colors.primary || '#6366F1' }]} 
-            onPress={() => setPlan(null)}
-          >
-            <Text style={styles.regenerateButtonText}>🔄 Create New Plan</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );

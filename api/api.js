@@ -1,17 +1,9 @@
-import { API_CONFIG, getConfig, validateConfig, getModelConfig, getAIPromptConfig } from '../config/api-config.js';
+import { API_CONFIG, getConfig, validateConfig, getModelConfig, getAIPromptConfig, getActiveProviderConfig, getActiveProvider } from '../config/api-config.js';
 import { handleAPIError } from '../utils/errorHandler';
 
 // Validate configuration on import
 if (!validateConfig()) {
   console.warn('StudyMate API: Configuration validation failed. Some features may not work.');
-}
-
-const OPENAI_API_KEY = getConfig('OPENAI.API_KEY');
-const API_URL = getConfig('OPENAI.BASE_URL') || 'https://api.openai.com/v1';
-
-// Check if API key is configured
-if (!OPENAI_API_KEY) {
-  console.error('OpenAI API key is not configured. Please check your api-config.js file.');
 }
 
 // Rate limiting and retry configuration
@@ -30,7 +22,7 @@ const retryWithBackoff = async (fn, retries = RATE_LIMIT_CONFIG.maxRetries) => {
     return await fn();
   } catch (error) {
     if (retries === 0) throw error;
-    
+
     // Check if it's a rate limit error
     if (error.message.includes('429') || error.message.includes('rate limit')) {
       console.warn(`Rate limit hit, waiting ${RATE_LIMIT_CONFIG.rateLimitDelay}ms before retry...`);
@@ -44,42 +36,91 @@ const retryWithBackoff = async (fn, retries = RATE_LIMIT_CONFIG.maxRetries) => {
       console.warn(`API error, retrying in ${delay}ms... (${retries} retries left)`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
-    
+
     return retryWithBackoff(fn, retries - 1);
   }
 };
 
 /**
- * Enhanced error handling for OpenAI API responses
+ * Enhanced error handling for AI API responses
  */
-const handleOpenAIError = (response, errorData) => {
+const handleAIResponseError = (response, errorData) => {
   const status = response.status;
-  
+  let errorMessage = '';
+
+  // Try to get specific error message from response
+  if (errorData && errorData.error && errorData.error.message) {
+    errorMessage = errorData.error.message;
+  } else if (errorData && errorData.message) {
+    errorMessage = errorData.message;
+  } else {
+    errorMessage = `API request failed with status ${status}`;
+  }
+
   switch (status) {
     case 400:
-      throw new Error('Bad request: Please check your input.');
+      console.error('Bad Request Error Details:', errorData);
+      throw new Error(`Bad request: ${errorMessage}`);
     case 401:
-      throw new Error('Authentication failed. Please check your API configuration.');
+      console.error('Authentication Error Details:', errorData);
+      throw new Error('Authentication failed. Please check your API configuration: ' + errorMessage);
     case 403:
-      throw new Error('Access denied. Please check your API permissions.');
+      console.error('Forbidden Error Details:', errorData);
+      throw new Error('Access denied. Please check your API permissions: ' + errorMessage);
     case 404:
-      throw new Error('Model not found. Please check your model configuration.');
+      console.error('Not Found Error Details:', errorData);
+      throw new Error('Model not found. Please check your model configuration: ' + errorMessage);
     case 429:
-      throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+      console.error('Rate Limit Error Details:', errorData);
+      throw new Error('Rate limit exceeded. Please wait a moment and try again: ' + errorMessage);
     case 500:
-      throw new Error('Service temporarily unavailable. Please try again later.');
+      console.error('Server Error Details:', errorData);
+      throw new Error('Service temporarily unavailable. Please try again later: ' + errorMessage);
     case 502:
     case 503:
     case 504:
-      throw new Error('Service temporarily unavailable. Please try again later.');
+      console.error('Service Unavailable Error Details:', errorData);
+      throw new Error('Service temporarily unavailable. Please try again later: ' + errorMessage);
     default:
-      throw new Error(`API request failed with status ${status}`);
+      console.error('Unexpected Error Details:', errorData);
+      throw new Error(errorMessage);
   }
 };
 
 /**
- * Gets a response from the GPT model for the chat assistant.
- * Uses GPT-4o for best conversation quality.
+ * Helper to parse JSON from AI response, handling markdown blocks.
+ */
+const parseAIJSON = (content) => {
+  if (!content) return null;
+  let jsonString = content;
+
+  // Strip markdown code blocks if present
+  if (content.includes('```json')) {
+    jsonString = content.split('```json')[1].split('```')[0].trim();
+  } else if (content.includes('```')) {
+    jsonString = content.split('```')[1].split('```')[0].trim();
+  }
+
+  try {
+    return JSON.parse(jsonString);
+  } catch (e) {
+    console.error("Failed to parse AI JSON:", e);
+    // Try to find the first '{' and last '}' as a fallback
+    try {
+      const firstBrace = content.indexOf('{');
+      const lastBrace = content.lastIndexOf('}');
+      if (firstBrace !== -1 && lastBrace !== -1) {
+        return JSON.parse(content.substring(firstBrace, lastBrace + 1));
+      }
+    } catch (e2) {
+      console.error("Fallback JSON parsing failed:", e2);
+    }
+    throw new Error("AI returned invalid JSON format");
+  }
+};
+
+/**
+ * Gets a response from the AI model (Groq/OpenAI/OpenRouter).
  * @param {Array} messages - The conversation history.
  * @returns {Promise<string>} The AI's response text.
  */
@@ -88,8 +129,9 @@ export const getAIChatResponse = async (messages) => {
     throw new Error('AI features are disabled in this environment');
   }
 
-  if (!OPENAI_API_KEY) {
-    throw new Error('OpenAI API key is not configured. Please check your configuration.');
+  const providerConfig = getActiveProviderConfig('TEXT');
+  if (!providerConfig || !providerConfig.API_KEY) {
+    throw new Error('AI API key is not configured.');
   }
 
   // Validate inputs
@@ -109,11 +151,13 @@ export const getAIChatResponse = async (messages) => {
 
   const makeRequest = async () => {
     try {
-      const response = await fetch(`${API_URL}/chat/completions`, {
+      const response = await fetch(`${providerConfig.BASE_URL}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          'Authorization': `Bearer ${providerConfig.API_KEY}`,
+          'HTTP-Referer': 'https://studymate.app', // Required for OpenRouter
+          'X-Title': 'StudyMate App', // Required for OpenRouter
         },
         body: JSON.stringify({
           model: chatConfig.model,
@@ -125,28 +169,39 @@ export const getAIChatResponse = async (messages) => {
           temperature: chatConfig.temperature,
         }),
       });
-      
+
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        handleOpenAIError(response, {
-          url: `${API_URL}/chat/completions`,
+        const errorText = await response.text();
+        let errorData = {};
+        
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          // If response is not JSON, include the raw text
+          errorData = { message: errorText, error: errorText };
+        }
+        
+        handleAIResponseError(response, {
+          url: `${providerConfig.BASE_URL}/chat/completions`,
           method: 'POST',
+          status: response.status,
+          statusText: response.statusText,
           ...errorData
         });
       }
-      
+
       const data = await response.json();
       return data.choices[0].message.content;
     } catch (error) {
       console.error("Error getting AI chat response:", error);
-      
+
       // Use centralized error handling
       const normalizedError = handleAPIError(error, {
-        url: `${API_URL}/chat/completions`,
+        url: `${providerConfig.BASE_URL}/chat/completions`,
         method: 'POST',
         purpose: 'AI Chat Response'
       });
-      
+
       // Don't expose raw error messages to users
       if (normalizedError.technicalMessage.includes('rate limit')) {
         throw new Error("Too many requests. Please wait a moment and try again.");
@@ -162,8 +217,7 @@ export const getAIChatResponse = async (messages) => {
 };
 
 /**
- * Summarizes a given block of text using OpenAI.
- * Uses GPT-4o-mini for cost-effective analysis.
+ * Summarizes a given block of text using AI.
  * @param {string} textToSummarize - The notes or document text.
  * @returns {Promise<string>} The summarized text.
  */
@@ -177,22 +231,25 @@ export const summarizeTextWithOpenAI = async (textToSummarize) => {
     throw new Error('Invalid text to summarize');
   }
 
-  if (textToSummarize.length > 10000) {
+  if (textToSummarize.length > 20000) { // Increased limit for Llama 3
     throw new Error('Text to summarize is too long');
   }
 
+  const providerConfig = getActiveProviderConfig('TEXT');
   const analysisConfig = getModelConfig('ANALYSIS');
   const promptConfig = getAIPromptConfig('SUMMARY');
 
   try {
     const prompt = promptConfig.prompt + `\n\n${textToSummarize}`;
     const messages = [{ role: 'user', content: prompt }];
-    
-    const response = await fetch(`${API_URL}/chat/completions`, {
+
+    const response = await fetch(`${providerConfig.BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${providerConfig.API_KEY}`,
+        'HTTP-Referer': 'https://studymate.app',
+        'X-Title': 'StudyMate App',
       },
       body: JSON.stringify({
         model: analysisConfig.model,
@@ -201,37 +258,43 @@ export const summarizeTextWithOpenAI = async (textToSummarize) => {
         temperature: promptConfig.temperature,
       }),
     });
-    
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      handleOpenAIError(response, {
-        url: `${API_URL}/chat/completions`,
+      const errorText = await response.text();
+      let errorData = {};
+      
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        // If response is not JSON, include the raw text
+        errorData = { message: errorText, error: errorText };
+      }
+      
+      handleAIResponseError(response, {
+        url: `${providerConfig.BASE_URL}/chat/completions`,
         method: 'POST',
         purpose: 'Text Summarization',
+        status: response.status,
+        statusText: response.statusText,
         ...errorData
       });
     }
-    
+
     const data = await response.json();
     return data.choices[0].message.content;
   } catch (error) {
     console.error("Error summarizing text:", error);
-    
-    // Use centralized error handling
     handleAPIError(error, {
-      url: `${API_URL}/chat/completions`,
+      url: `${providerConfig.BASE_URL}/chat/completions`,
       method: 'POST',
       purpose: 'Text Summarization'
     });
-    
-    // Don't expose raw error messages
     throw new Error("Failed to summarize text. Please try again.");
   }
 };
 
 /**
- * Generates a multiple-choise asnwers from the give question.
- * Uses GPT-3.5-turbo-1106 for reliable JSON output.
+ * Generates a multiple-choice quiz.
  * @param {string} contextText - The text to base the quiz on.
  * @returns {Promise<Object>} A quiz object with questions array.
  */
@@ -240,133 +303,75 @@ export const generateQuizWithOpenAI = async (contextText) => {
     throw new Error('AI features are disabled in this environment');
   }
 
-  // Validate input
   if (typeof contextText !== 'string' || contextText.length === 0) {
-    throw new Error('Invalid context text for quiz generation');
+    throw new Error('Invalid context text');
   }
 
-  if (contextText.length > 10000) {
-    throw new Error('Context text is too long for quiz generation');
-  }
-
+  const providerConfig = getActiveProviderConfig('TEXT');
   const generationConfig = getModelConfig('GENERATION');
   const promptConfig = getAIPromptConfig('QUIZ');
   const prompt = promptConfig.prompt + `\n\nText to base quiz on: ${contextText}`;
-  
+
   try {
-    const response = await fetch(`${API_URL}/chat/completions`, {
+    const response = await fetch(`${providerConfig.BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${providerConfig.API_KEY}`,
+        'HTTP-Referer': 'https://studymate.app',
+        'X-Title': 'StudyMate App',
       },
       body: JSON.stringify({
         model: generationConfig.model,
         messages: [{ role: 'user', content: prompt }],
-        response_format: { type: "json_object" },
+        response_format: { type: "json_object" }, // Supported by OpenAI and Groq for Llama 3
         max_tokens: promptConfig.max_tokens,
         temperature: promptConfig.temperature,
       }),
     });
-    
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      handleOpenAIError(response, {
-        url: `${API_URL}/chat/completions`,
+      const errorText = await response.text();
+      let errorData = {};
+      
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        // If response is not JSON, include the raw text
+        errorData = { message: errorText, error: errorText };
+      }
+      
+      handleAIResponseError(response, {
+        url: `${providerConfig.BASE_URL}/chat/completions`,
         method: 'POST',
         purpose: 'Quiz Generation',
+        status: response.status,
+        statusText: response.statusText,
         ...errorData
       });
     }
-    
+
     const data = await response.json();
-    const quizData = JSON.parse(data.choices[0].message.content);
-    
-    // Validate the response structure
+    const quizData = parseAIJSON(data.choices[0].message.content);
+
     if (!quizData.questions || !Array.isArray(quizData.questions)) {
       throw new Error('Invalid quiz format received from AI');
     }
-    
+
     return quizData;
   } catch (error) {
     console.error("Error generating quiz:", error);
-    
-    // Use centralized error handling
     handleAPIError(error, {
-      url: `${API_URL}/chat/completions`,
+      url: `${providerConfig.BASE_URL}/chat/completions`,
       method: 'POST',
       purpose: 'Quiz Generation'
     });
-    
-    // Don't expose raw error messages
     throw new Error("Failed to generate quiz. Please try again.");
   }
 };
 
 /**
- * Generates an image using DALL-E 3.
- * Uses DALL-E 3 for high-quality educational images.
- * @param {string} prompt - The text description for the image.
- * @param {Object} options - Optional parameters for image generation.
- * @returns {Promise<string>} The URL of the generated image.
- */
-export const generateImageWithOpenAI = async (prompt, options = {}) => {
-  if (!getConfig('FEATURES.ENABLE_AI_FEATURES')) {
-    throw new Error('AI features are disabled in this environment');
-  }
-
-  const imageConfig = getModelConfig('IMAGE');
-  const promptConfig = getAIPromptConfig('IMAGE');
-  
-  // Combine default prompt with user prompt
-  const fullPrompt = promptConfig.default_prompt + prompt + '. ' + promptConfig.style_guide;
-
-  try {
-    const response = await fetch(`${API_URL}/images/generations`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: imageConfig.model,
-        prompt: fullPrompt,
-        n: 1,
-        size: options.size || imageConfig.size,
-        quality: options.quality || imageConfig.quality,
-        style: options.style || imageConfig.style,
-      }),
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      handleAPIError(response, {
-        url: `${API_URL}/images/generations`,
-        method: 'POST',
-        purpose: 'Image Generation',
-        ...errorData
-      });
-    }
-    
-    const data = await response.json();
-    return data.data[0].url;
-  } catch (error) {
-    console.error("Error generating image:", error);
-    
-    // Use centralized error handling
-    handleAPIError(error, {
-      url: `${API_URL}/images/generations`,
-      method: 'POST',
-      purpose: 'Image Generation'
-    });
-    
-    throw new Error("Failed to generate image. Please try again.");
-  }
-};
-
-/**
  * Generates flashcards from study material.
- * Uses GPT-3.5-turbo-1106 for reliable JSON output.
  * @param {string} studyMaterial - The text to generate flashcards from.
  * @returns {Promise<Array>} Array of flashcard objects.
  */
@@ -375,25 +380,23 @@ export const generateFlashcardsWithOpenAI = async (studyMaterial) => {
     throw new Error('AI features are disabled in this environment');
   }
 
-  // Validate input
   if (typeof studyMaterial !== 'string' || studyMaterial.length === 0) {
-    throw new Error('Invalid study material for flashcard generation');
+    throw new Error('Invalid study material');
   }
 
-  if (studyMaterial.length > 10000) {
-    throw new Error('Study material is too long for flashcard generation');
-  }
-
+  const providerConfig = getActiveProviderConfig('TEXT');
   const generationConfig = getModelConfig('GENERATION');
   const promptConfig = getAIPromptConfig('FLASHCARD');
   const prompt = promptConfig.prompt + `\n\nStudy material: ${studyMaterial}`;
-  
+
   try {
-    const response = await fetch(`${API_URL}/chat/completions`, {
+    const response = await fetch(`${providerConfig.BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${providerConfig.API_KEY}`,
+        'HTTP-Referer': 'https://studymate.app',
+        'X-Title': 'StudyMate App',
       },
       body: JSON.stringify({
         model: generationConfig.model,
@@ -403,135 +406,288 @@ export const generateFlashcardsWithOpenAI = async (studyMaterial) => {
         temperature: promptConfig.temperature,
       }),
     });
-    
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      handleOpenAIError(response, {
-        url: `${API_URL}/chat/completions`,
+      const errorText = await response.text();
+      let errorData = {};
+      
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        // If response is not JSON, include the raw text
+        errorData = { message: errorText, error: errorText };
+      }
+      
+      handleAIResponseError(response, {
+        url: `${providerConfig.BASE_URL}/chat/completions`,
         method: 'POST',
         purpose: 'Flashcard Generation',
+        status: response.status,
+        statusText: response.statusText,
         ...errorData
       });
     }
-    
+
     const data = await response.json();
-    const flashcardData = JSON.parse(data.choices[0].message.content);
-    
+    const flashcardData = parseAIJSON(data.choices[0].message.content);
+
     if (!flashcardData.flashcards || !Array.isArray(flashcardData.flashcards)) {
       throw new Error('Invalid flashcard format received from AI');
     }
-    
+
     return flashcardData.flashcards;
   } catch (error) {
     console.error("Error generating flashcards:", error);
-    
-    // Use centralized error handling
     handleAPIError(error, {
-      url: `${API_URL}/chat/completions`,
+      url: `${providerConfig.BASE_URL}/chat/completions`,
       method: 'POST',
       purpose: 'Flashcard Generation'
     });
-    
-    // Don't expose raw error messages
     throw new Error("Failed to generate flashcards. Please try again.");
   }
 };
 
 /**
- * Transcribes audio to text using Whisper.
- * Uses Whisper-1 for high-quality audio transcription.
- * @param {File|Blob} audioFile - The audio file to transcribe.
- * @param {Object} options - Optional parameters for transcription.
- * @returns {Promise<string>} The transcribed text.
+ * Generates a study plan.
+ * @param {string} subjects - List of subjects.
+ * @param {string} goals - Study goals.
+ * @returns {Promise<Array>} Array of plan items.
  */
-export const transcribeAudioWithOpenAI = async (audioFile, options = {}) => {
+export const generateStudyPlanWithAI = async (subjects, goals) => {
+  if (!getConfig('FEATURES.ENABLE_AI_FEATURES')) {
+    throw new Error('AI features are disabled');
+  }
+
+  const providerConfig = getActiveProviderConfig('TEXT');
+  const generationConfig = getModelConfig('GENERATION');
+  const promptConfig = getAIPromptConfig('PLAN');
+
+  const fullPrompt = `${promptConfig.prompt}\n\nSubjects: ${subjects}\nGoals: ${goals}`;
+
+  try {
+    const response = await fetch(`${providerConfig.BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${providerConfig.API_KEY}`,
+        'HTTP-Referer': 'https://studymate.app',
+        'X-Title': 'StudyMate App',
+      },
+      body: JSON.stringify({
+        model: generationConfig.model,
+        messages: [{ role: 'user', content: fullPrompt }],
+        max_tokens: promptConfig.max_tokens,
+        temperature: promptConfig.temperature,
+        // Not enforcing json_object here as some models struggle with it without schema
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorData = {};
+      
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        // If response is not JSON, include the raw text
+        errorData = { message: errorText, error: errorText };
+      }
+      
+      handleAIResponseError(response, {
+        url: `${providerConfig.BASE_URL}/chat/completions`,
+        method: 'POST',
+        purpose: 'Study Plan Generation',
+        status: response.status,
+        statusText: response.statusText,
+        ...errorData
+      });
+    }
+
+    const data = await response.json();
+    const content = data.choices[0].message.content;
+
+    try {
+      const planData = parseAIJSON(content);
+      return Array.isArray(planData) ? planData : [];
+    } catch (e) {
+      console.error("Failed to parse plan JSON", e);
+      throw new Error("AI returned invalid format");
+    }
+
+  } catch (error) {
+    console.error("Error generating study plan:", error);
+    throw new Error("Failed to generate study plan");
+  }
+};
+
+/**
+ * Generates an image.
+ * Uses OpenRouter or OpenAI if configured.
+ * @param {string} prompt - The text description.
+ * @returns {Promise<string>} The URL of the generated image.
+ */
+export const generateImageWithOpenAI = async (prompt, options = {}) => {
   if (!getConfig('FEATURES.ENABLE_AI_FEATURES')) {
     throw new Error('AI features are disabled in this environment');
   }
 
-  const audioConfig = getModelConfig('AUDIO');
-  
-  try {
-    const formData = new FormData();
-    formData.append('file', audioFile);
-    formData.append('model', audioConfig.model);
-    formData.append('response_format', options.response_format || audioConfig.response_format);
-    formData.append('language', options.language || audioConfig.language);
-    
-    if (options.prompt) {
-      formData.append('prompt', options.prompt);
-    }
+  // Get IMAGE provider settings (defaults to OpenRouter if configured so)
+  const providerConfig = getActiveProviderConfig('IMAGE');
+  const imageConfig = getModelConfig('IMAGE');
+  const promptConfig = getAIPromptConfig('IMAGE');
 
-    const response = await fetch(`${API_URL}/audio/transcriptions`, {
+  const fullPrompt = promptConfig.default_prompt + prompt + '. ' + promptConfig.style_guide;
+
+  // IMPORTANT: Groq does not support images. If provider is Groq but IMAGE provider falls back to OpenAI/OpenRouter, we are good.
+  // Our config ensures IMAGE provider is OpenRouter or OpenAI.
+
+  try {
+    // If using OpenAI or compatible endpoint
+    const endpoint = providerConfig.BASE_URL.includes('openai.com') ? '/images/generations' : '/images/generations';
+    // OpenRouter uses different endpoints for images usually?
+    // Actually OpenRouter standardizes text. For images, we might need specific handling if using Stable Diffusion via OpenRouter.
+    // However, OpenRouter's /chat/completions allows some image models? 
+    // Standard OpenAI image API is /images/generations. OpenRouter might not support this endpoint fully for all models.
+    // Ideally we use a text-to-image API.
+    // For now, let's assume OpenRouter supports /images/generations OR we use OpenAI if the key is there.
+    // If provider is OpenRouter, check documentation...
+    // Let's stick to /images/generations as standard.
+
+    const response = await fetch(`${providerConfig.BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${providerConfig.API_KEY}`,
+        'HTTP-Referer': 'https://studymate.app',
+        'X-Title': 'StudyMate App',
       },
-      body: formData,
+      body: JSON.stringify({
+        model: imageConfig.model,
+        prompt: fullPrompt,
+        n: 1,
+        size: options.size || imageConfig.size,
+      }),
     });
-    
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      handleAPIError(response, {
-        url: `${API_URL}/audio/transcriptions`,
+      const errorText = await response.text();
+      let errorData = {};
+      
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        // If response is not JSON, include the raw text
+        errorData = { message: errorText, error: errorText };
+      }
+      
+      console.error("Image gen error", errorData);
+      
+      // Use handleAIResponseError for consistency
+      handleAIResponseError(response, {
+        url: `${providerConfig.BASE_URL}${endpoint}`,
         method: 'POST',
-        purpose: 'Audio Transcription',
+        purpose: 'Image Generation',
+        status: response.status,
+        statusText: response.statusText,
         ...errorData
       });
     }
-    
+
     const data = await response.json();
-    return data.text;
+    return data.data[0].url;
   } catch (error) {
-    console.error("Error transcribing audio:", error);
-    
-    // Use centralized error handling
-    handleAPIError(error, {
-      url: `${API_URL}/audio/transcriptions`,
-      method: 'POST',
-      purpose: 'Audio Transcription'
-    });
-    
-    throw new Error("Failed to transcribe audio. Please try again.");
+    console.error("Error generating image:", error);
+    throw new Error("Failed to generate image. Please try again.");
   }
 };
 
 /**
- * Check if AI features are enabled
- * @returns {boolean} True if AI features are enabled
+ * Transcribes audio to text.
  */
+export const transcribeAudioWithOpenAI = async (audioFile, options = {}) => {
+  if (!getConfig('FEATURES.ENABLE_AI_FEATURES')) {
+    throw new Error('AI features are disabled');
+  }
+
+  const providerConfig = getActiveProviderConfig('AUDIO');
+  const audioConfig = getModelConfig('AUDIO');
+
+  try {
+    const formData = new FormData();
+    formData.append('file', audioFile);
+    formData.append('model', audioConfig.model);
+    formData.append('language', options.language || 'en');
+
+    if (options.prompt) {
+      formData.append('prompt', options.prompt);
+    }
+
+    const response = await fetch(`${providerConfig.BASE_URL}/audio/transcriptions`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${providerConfig.API_KEY}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      let errorData = {};
+      
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        // If response is not JSON, include the raw text
+        errorData = { message: errorText, error: errorText };
+      }
+      
+      // Use handleAIResponseError for consistency
+      handleAIResponseError(response, {
+        url: `${providerConfig.BASE_URL}/audio/transcriptions`,
+        method: 'POST',
+        purpose: 'Audio Transcription',
+        status: response.status,
+        statusText: response.statusText,
+        ...errorData
+      });
+    }
+
+    const data = await response.json();
+    return data.text;
+  } catch (error) {
+    console.error("Error transcribing audio:", error);
+    throw new Error("Failed to transcribe audio.");
+  }
+};
+
 export const isAIEnabled = () => {
   return getConfig('FEATURES.ENABLE_AI_FEATURES') === true;
 };
 
-/**
- * Get current API configuration
- * @returns {Object} Current API configuration
- */
 export const getAPIConfig = () => {
+  const provider = getActiveProvider('TEXT');
+  const providerConfig = getActiveProviderConfig('TEXT');
   return {
     isAIEnabled: isAIEnabled(),
-    models: getConfig('OPENAI.MODELS'),
-    baseUrl: API_URL
+    models: providerConfig.MODELS,
+    baseUrl: providerConfig.BASE_URL,
+    provider: provider
   };
 };
 
-/**
- * Get available AI models and their descriptions
- * @returns {Object} Object containing model information
- */
 export const getAvailableModels = () => {
-  const models = getConfig('OPENAI.MODELS');
+  const providerConfig = getActiveProviderConfig('TEXT');
+  const models = providerConfig.MODELS;
   const modelInfo = {};
-  
-  Object.keys(models).forEach(key => {
-    modelInfo[key] = {
-      model: models[key].model,
-      description: models[key].description,
-      max_tokens: models[key].max_tokens,
-      temperature: models[key].temperature
-    };
-  });
-  
+
+  if (models) {
+    Object.keys(models).forEach(key => {
+      modelInfo[key] = {
+        model: models[key] && models[key].model ? models[key].model : (models[key] || 'Unknown'),
+        description: 'AI Model'
+      };
+    });
+  }
+
   return modelInfo;
 };

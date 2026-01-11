@@ -280,10 +280,11 @@ CREATE POLICY "Group creators can delete their groups"
 -- Group members policies
 CREATE POLICY "Members can view group members" 
   ON group_members FOR SELECT USING (
-    group_members.group_id IN (
-      SELECT gm_check.group_id 
+    EXISTS (
+      SELECT 1 
       FROM group_members gm_check 
-      WHERE gm_check.user_id = auth.uid()
+      WHERE gm_check.group_id = group_members.group_id 
+      AND gm_check.user_id = auth.uid()
     )
   );
 CREATE POLICY "Users can join public groups" 
@@ -508,9 +509,12 @@ END $$;
 CREATE POLICY "Users can view profiles of group members" 
   ON profiles FOR SELECT USING (
     EXISTS (
-      SELECT 1 FROM group_members gm1
-      JOIN group_members gm2 ON gm1.group_id = gm2.group_id
-      WHERE gm1.user_id = auth.uid() AND gm2.user_id = profiles.id
+      SELECT 1 FROM group_members gm
+      WHERE gm.user_id = profiles.id
+      AND gm.group_id IN (
+        SELECT group_id FROM group_members
+        WHERE user_id = auth.uid()
+      )
     )
   );
 

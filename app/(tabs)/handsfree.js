@@ -32,13 +32,13 @@ export default function HandsfreeScreen() {
   const [pulseAnimation] = useState(new Animated.Value(1));
   const [waveAnimation] = useState([new Animated.Value(0.3), new Animated.Value(0.5), new Animated.Value(0.3)]);
   const [glowAnimation] = useState(new Animated.Value(0));
-  
+
   const scrollViewRef = useRef(null);
   const typingIntervalRef = useRef(null);
   const cognitiveIntervalRef = useRef(null);
   const rotationAnimationRef = useRef(null);
   const messageAnimations = useRef({});
-  
+
   // Timer refs for organic audio waves
   const waveTimerRef = useRef(null);
 
@@ -63,7 +63,7 @@ export default function HandsfreeScreen() {
     } else {
       idlePulseAnimation.setValue(1);
     }
-    
+
     return () => {
       if (idleAnimation) idleAnimation.stop();
     };
@@ -93,7 +93,7 @@ export default function HandsfreeScreen() {
     } else {
       glowAnimation.setValue(0);
     }
-    
+
     return () => {
       if (glowAnimationInstance) glowAnimationInstance.stop();
     };
@@ -122,7 +122,7 @@ export default function HandsfreeScreen() {
         waveAnimation.forEach(anim => anim.setValue(0.3));
       }
     }
-    
+
     return () => {
       if (waveTimerRef.current) {
         clearInterval(waveTimerRef.current);
@@ -135,7 +135,7 @@ export default function HandsfreeScreen() {
     if (isListening) {
       // Stop idle animation when listening
       idlePulseAnimation.setValue(1);
-      
+
       // Microphone pulse animation
       Animated.loop(
         Animated.sequence([
@@ -191,7 +191,7 @@ export default function HandsfreeScreen() {
         rotationAnimation.setValue(0);
       }
     }
-    
+
     return () => {
       if (rotationAnimationRef.current) {
         rotationAnimationRef.current.stop();
@@ -208,7 +208,7 @@ export default function HandsfreeScreen() {
         "Formulating a clear explanation"
       ];
       let currentIndex = 0;
-      
+
       cognitiveIntervalRef.current = setInterval(() => {
         setCognitiveStatus(statuses[currentIndex]);
         currentIndex = (currentIndex + 1) % statuses.length;
@@ -219,7 +219,7 @@ export default function HandsfreeScreen() {
         cognitiveIntervalRef.current = null;
       }
     }
-    
+
     return () => {
       if (cognitiveIntervalRef.current) {
         clearInterval(cognitiveIntervalRef.current);
@@ -230,12 +230,12 @@ export default function HandsfreeScreen() {
   const startListening = () => {
     if (!isListening) {
       setIsListening(true);
-      
+
       // Trigger haptic feedback if available
       if (Haptics) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
-      
+
       // Simulate voice input after 3 seconds
       setTimeout(() => {
         simulateVoiceInput();
@@ -246,7 +246,7 @@ export default function HandsfreeScreen() {
   const stopListening = () => {
     if (isListening) {
       setIsListening(false);
-      
+
       // Trigger haptic feedback if available
       if (Haptics) {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -261,7 +261,7 @@ export default function HandsfreeScreen() {
       "Explain photosynthesis in simple terms",
       "What are the benefits of spaced repetition?"
     ];
-    
+
     const randomInput = voiceInputs[Math.floor(Math.random() * voiceInputs.length)];
     handleVoiceInput(randomInput);
   };
@@ -272,12 +272,12 @@ export default function HandsfreeScreen() {
     setTimeout(() => {
       let index = 0;
       setTypingText('');
-      
+
       typingIntervalRef.current = setInterval(() => {
         if (index < fullText.length) {
           setTypingText(prev => prev + fullText[index]);
           index++;
-          
+
           // Scroll to bottom when typing progresses
           setTimeout(() => {
             scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -285,19 +285,19 @@ export default function HandsfreeScreen() {
         } else {
           // Animation complete - add the full message to conversation
           clearInterval(typingIntervalRef.current);
-          
+
           const aiMessage = {
             id: Date.now() + 1,
             type: 'ai',
             text: fullText,
             timestamp: new Date().toLocaleTimeString()
           };
-          
+
           setConversation(prev => [...prev, aiMessage]);
           setShowTypingIndicator(false);
           setIsProcessing(false);
           setIsListening(false);
-          
+
           // Trigger haptic feedback when typing starts
           if (Haptics) {
             Haptics.selectionAsync();
@@ -331,8 +331,8 @@ export default function HandsfreeScreen() {
         { role: 'user', content: voiceText }
       ];
 
-      const aiResponse = await getAIChatResponse(voiceText, conversationHistory);
-      
+      const aiResponse = await getAIChatResponse(conversationHistory);
+
       if (aiResponse) {
         // Start typing animation
         setShowTypingIndicator(true);
@@ -355,7 +355,7 @@ export default function HandsfreeScreen() {
 
   const handleTextInput = async () => {
     if (!inputText.trim()) return;
-    
+
     await handleVoiceInput(inputText.trim());
     setInputText('');
   };
@@ -375,7 +375,7 @@ export default function HandsfreeScreen() {
   const AnimatedMessage = ({ message, index }) => {
     const messageAnim = useRef(new Animated.Value(0)).current;
     const translateY = useRef(new Animated.Value(8)).current;
-    
+
     useEffect(() => {
       // Animate message on mount
       Animated.parallel([
@@ -390,17 +390,17 @@ export default function HandsfreeScreen() {
           useNativeDriver: true,
         }),
       ]).start();
-      
+
       // Store the animation for potential cleanup
       messageAnimations.current[message.id] = { messageAnim, translateY };
-      
+
       return () => {
         if (messageAnimations.current[message.id]) {
           delete messageAnimations.current[message.id];
         }
       };
     }, []);
-    
+
     return (
       <Animated.View style={{
         opacity: messageAnim,
@@ -410,7 +410,7 @@ export default function HandsfreeScreen() {
           style={[
             styles.messageContainer,
             message.type === 'user' ? styles.userMessage : styles.aiMessage,
-            { 
+            {
               backgroundColor: message.type === 'user' ? navTheme.colors.card : navTheme.colors.card,
               borderLeftWidth: message.type === 'ai' ? 4 : 0,
               borderLeftColor: message.type === 'ai' ? (navTheme.dark ? '#6366F1' : '#4F46E5') : 'transparent'
@@ -427,7 +427,7 @@ export default function HandsfreeScreen() {
       </Animated.View>
     );
   };
-  
+
   return (
     <View style={[styles.container, { backgroundColor: navTheme.colors.background }]}>
       {/* Header */}
@@ -458,7 +458,7 @@ export default function HandsfreeScreen() {
             }
           ]} />
         )}
-        
+
         <TouchableOpacity
           style={[
             styles.microphoneButton,
@@ -469,17 +469,21 @@ export default function HandsfreeScreen() {
         >
           <Animated.View style={[
             styles.microphoneIcon,
-            { 
+            {
               transform: [{ scale: isListening ? pulseAnimation : idlePulseAnimation }],
               shadowRadius: isListening ? 20 : 16,
               shadowOpacity: isListening ? 0.4 : 0.35,
             }
           ]}>
             {isProcessing ? (
-              <Animated.View style={{ transform: [{ rotate: rotationAnimation.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['0deg', '360deg']
-              })}] }}>
+              <Animated.View style={{
+                transform: [{
+                  rotate: rotationAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0deg', '360deg']
+                  })
+                }]
+              }}>
                 <Text style={styles.microphoneText}>●</Text>
               </Animated.View>
             ) : (
@@ -487,14 +491,14 @@ export default function HandsfreeScreen() {
             )}
           </Animated.View>
         </TouchableOpacity>
-        
+
         <Text style={[styles.microphoneLabel, { color: navTheme.colors.text }]}> {isListening ? 'Listening... speak now' : isProcessing ? 'Thinking...' : 'Tap to speak'}</Text>
-        
+
         {/* Cognitive status displayed below microphone when processing */}
         {isProcessing && (
           <Text style={[styles.cognitiveStatus, { color: navTheme.colors.text }]}> {cognitiveStatus}</Text>
         )}
-        
+
         {isListening && (
           <View style={styles.audioWaves}>
             <Animated.View style={[
@@ -534,23 +538,23 @@ export default function HandsfreeScreen() {
       </View>
 
       {/* Conversation */}
-      <ScrollView 
+      <ScrollView
         ref={scrollViewRef}
-        style={styles.conversationContainer} 
+        style={styles.conversationContainer}
         showsVerticalScrollIndicator={false}
         onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
       >
         {conversation.map((message, index) => (
           <AnimatedMessage key={message.id} message={message} index={index} />
         ))}
-        
+
         {showTypingIndicator && (
           <Animated.View style={{
             opacity: 1,
             transform: [{ translateY: 0 }]
           }}>
-            <View style={[styles.messageContainer, styles.aiMessage, { backgroundColor: navTheme.colors.card, borderLeftWidth: 4, borderLeftColor: navTheme.dark ? '#6366F1' : '#4F46E5' }]}> 
-              <Text style={[styles.messageText, { color: navTheme.colors.text }]}>{typingText}<Text style={{opacity: 0.7}}>|</Text></Text>
+            <View style={[styles.messageContainer, styles.aiMessage, { backgroundColor: navTheme.colors.card, borderLeftWidth: 4, borderLeftColor: navTheme.dark ? '#6366F1' : '#4F46E5' }]}>
+              <Text style={[styles.messageText, { color: navTheme.colors.text }]}>{typingText}<Text style={{ opacity: 0.7 }}>|</Text></Text>
             </View>
           </Animated.View>
         )}

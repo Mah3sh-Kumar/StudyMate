@@ -16,6 +16,7 @@ import { useTheme } from '@react-navigation/native';
 import { router } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 import { useThemePreference } from '../contexts/ThemeContext';
+import { setRuntimeConfig } from '../config/api-config';
 import { userService } from '../lib/database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -51,15 +52,15 @@ export default function SettingsScreen() {
 
       if (error) {
         console.log('Profile not found in DB, creating from auth metadata...');
-        
+
         // Try to create a profile from auth metadata if it doesn't exist
         const fullNameFromAuth = user?.user_metadata?.full_name || '';
         const usernameFromAuth = user?.user_metadata?.username || '';
-        
+
         // Set the UI values from auth metadata
         setFullName(fullNameFromAuth);
         setUsername(usernameFromAuth);
-        
+
         // Create the profile in the database if it doesn't exist
         if (user && (fullNameFromAuth || usernameFromAuth)) {
           const { error: dbError } = await userService.updateProfile(user.id, {
@@ -67,7 +68,7 @@ export default function SettingsScreen() {
             username: usernameFromAuth,
             email: user.email,
           });
-          
+
           if (dbError) {
             console.warn('Created profile from auth metadata, but DB sync failed:', dbError);
           } else {
@@ -87,7 +88,6 @@ export default function SettingsScreen() {
     }
   };
 
-  // Preferences persistence
   const loadPreferences = async () => {
     try {
       const storedPrefs = await AsyncStorage.getItem('userPreferences');
@@ -95,6 +95,7 @@ export default function SettingsScreen() {
         const { notifications, aiFeatures } = JSON.parse(storedPrefs);
         setNotifications(notifications);
         setAiFeatures(aiFeatures);
+        setRuntimeConfig('FEATURES.ENABLE_AI_FEATURES', aiFeatures);
       }
     } catch (error) {
       console.error('Error loading preferences:', error);
@@ -106,6 +107,12 @@ export default function SettingsScreen() {
       const newPrefs = { notifications, aiFeatures, ...prefs };
       setNotifications(newPrefs.notifications);
       setAiFeatures(newPrefs.aiFeatures);
+
+      // Update runtime config if aiFeatures changed
+      if (prefs.hasOwnProperty('aiFeatures')) {
+        setRuntimeConfig('FEATURES.ENABLE_AI_FEATURES', prefs.aiFeatures);
+      }
+
       await AsyncStorage.setItem('userPreferences', JSON.stringify(newPrefs));
     } catch (error) {
       console.error('Error saving preferences:', error);
@@ -175,9 +182,11 @@ export default function SettingsScreen() {
       'This action cannot be undone. All your data will be permanently deleted.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => {
+        {
+          text: 'Delete', style: 'destructive', onPress: () => {
             Alert.alert('Info', 'Account deletion feature coming soon');
-          } },
+          }
+        },
       ]
     );
   };
@@ -486,7 +495,8 @@ const styles = StyleSheet.create({
   inputGroup: { paddingHorizontal: 22, paddingBottom: 18 },
   inputLabel: { fontSize: 17, fontWeight: '700', marginBottom: 10, letterSpacing: 0.2 },
   input: { borderWidth: 1, borderRadius: 14, padding: 18, fontSize: 17 },
-  saveButton: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+  saveButton: {
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
     padding: 18, borderRadius: 14, marginHorizontal: 22, marginBottom: 22,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
@@ -496,8 +506,10 @@ const styles = StyleSheet.create({
   },
   saveButtonIcon: { fontSize: 19, marginRight: 10 },
   saveButtonText: { color: '#fff', fontWeight: '700', fontSize: 17, letterSpacing: 0.5 },
-  settingItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20,
-    borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
+  settingItem: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20,
+    borderBottomWidth: 1, borderBottomColor: '#f1f5f9'
+  },
   settingInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   settingIcon: { fontSize: 20, marginRight: 16, width: 24, textAlign: 'center' },
   settingDetails: { flex: 1 },

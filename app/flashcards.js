@@ -33,6 +33,8 @@ export default function FlashcardsScreen() {
   useEffect(() => {
     if (user) {
       loadUserDecks();
+    } else {
+      setLoading(false);
     }
   }, [user]);
 
@@ -41,15 +43,15 @@ export default function FlashcardsScreen() {
     try {
       setLoading(true);
       const { data, error } = await flashcardService.getUserDecks(user.id);
-      
+
       if (error) {
         console.error('Error loading decks:', error);
         Alert.alert('❌ Error', 'Failed to load flashcard decks');
         return;
       }
-      
+
       setDecks(data || []);
-      
+
       // If no decks exist, create a default deck
       if (!data || data.length === 0) {
         await createDefaultDeck();
@@ -75,12 +77,12 @@ export default function FlashcardsScreen() {
         subject: 'General',
         isPublic: false
       });
-      
+
       if (error) {
         console.error('Error creating default deck:', error);
         return;
       }
-      
+
       setDecks([data]);
       setCurrentDeck(data);
       setFlashcards([]);
@@ -93,12 +95,12 @@ export default function FlashcardsScreen() {
   const loadDeckCards = async (deckId) => {
     try {
       const { data, error } = await flashcardService.getDeckCards(deckId);
-      
+
       if (error) {
         console.error('Error loading cards:', error);
         return;
       }
-      
+
       setFlashcards(data || []);
       setCurrentCardIndex(0);
       setIsFlipped(false);
@@ -121,12 +123,12 @@ export default function FlashcardsScreen() {
         subject: newDeckSubject.trim() || 'General',
         isPublic: false
       });
-      
+
       if (error) {
         Alert.alert('❌ Error', 'Failed to create deck');
         return;
       }
-      
+
       setDecks(prev => [data, ...prev]);
       setCurrentDeck(data);
       setNewDeckName('');
@@ -135,7 +137,7 @@ export default function FlashcardsScreen() {
       setShowDeckSelector(false);
       setFlashcards([]);
       setCurrentCardIndex(0);
-      
+
       Alert.alert('✅ Success', 'Deck created successfully!');
     } catch (error) {
       console.error('Error creating deck:', error);
@@ -161,17 +163,17 @@ export default function FlashcardsScreen() {
         back: newCardBack.trim(),
         difficulty: 1
       });
-      
+
       if (error) {
         Alert.alert('❌ Error', 'Failed to add flashcard');
         return;
       }
-      
+
       setFlashcards(prev => [...prev, data]);
       setNewCardFront('');
       setNewCardBack('');
       setShowAddForm(false);
-      
+
       Alert.alert('✅ Success', 'Flashcard added successfully!');
     } catch (error) {
       console.error('Error adding card:', error);
@@ -192,29 +194,29 @@ export default function FlashcardsScreen() {
     }
 
     setIsGenerating(true);
-    
+
     try {
       const aiFlashcards = await generateFlashcardsWithOpenAI(aiInput);
-      
+
       if (aiFlashcards && Array.isArray(aiFlashcards)) {
         // Save each AI-generated card to the database
         const savedCards = [];
         for (const card of aiFlashcards) {
           const { data, error } = await flashcardService.addFlashcard(currentDeck.id, {
-          front: card.front,
+            front: card.front,
             back: card.back,
             difficulty: 1
           });
-          
+
           if (!error && data) {
             savedCards.push(data);
           }
         }
-        
+
         if (savedCards.length > 0) {
           setFlashcards(prev => [...prev, ...savedCards]);
-        setAiInput('');
-        setShowAIGenerator(false);
+          setAiInput('');
+          setShowAIGenerator(false);
           Alert.alert('✅ Success', `Generated ${savedCards.length} flashcards!`);
         } else {
           Alert.alert('❌ Error', 'Failed to save AI-generated flashcards');
@@ -243,19 +245,19 @@ export default function FlashcardsScreen() {
           onPress: async () => {
             try {
               const { error } = await flashcardService.deleteFlashcard(cardId);
-              
+
               if (error) {
                 Alert.alert('❌ Error', 'Failed to delete flashcard');
                 return;
               }
-              
+
               setFlashcards(prev => prev.filter(card => card.id !== cardId));
-              
+
               // Adjust current card index if needed
               if (currentCardIndex >= flashcards.length - 1) {
                 setCurrentCardIndex(Math.max(0, flashcards.length - 2));
               }
-              
+
               Alert.alert('✅ Success', 'Flashcard deleted successfully!');
             } catch (error) {
               console.error('Error deleting card:', error);
@@ -269,25 +271,25 @@ export default function FlashcardsScreen() {
 
   // Delete deck
   const deleteDeck = async (deckId) => {
-      Alert.alert(
+    Alert.alert(
       '🗑️ Delete Deck',
       'Are you sure you want to delete this deck? This will also delete all flashcards in it.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
           onPress: async () => {
             try {
               const { error } = await flashcardService.deleteDeck(deckId);
-              
+
               if (error) {
                 Alert.alert('❌ Error', 'Failed to delete deck');
                 return;
               }
-              
+
               setDecks(prev => prev.filter(deck => deck.id !== deckId));
-              
+
               if (currentDeck?.id === deckId) {
                 if (decks.length > 1) {
                   const newCurrentDeck = decks.find(deck => deck.id !== deckId);
@@ -299,16 +301,16 @@ export default function FlashcardsScreen() {
                   setCurrentCardIndex(0);
                 }
               }
-              
+
               Alert.alert('✅ Success', 'Deck deleted successfully!');
             } catch (error) {
               console.error('Error deleting deck:', error);
               Alert.alert('❌ Error', 'Failed to delete deck');
             }
-            }
           }
-        ]
-      );
+        }
+      ]
+    );
   };
 
   // Navigation functions
@@ -351,7 +353,7 @@ export default function FlashcardsScreen() {
 
   // Export cards
   const exportCards = () => {
-  if (flashcards.length === 0) {
+    if (flashcards.length === 0) {
       Alert.alert('❌ Error', 'No cards to export');
       return;
     }
@@ -409,17 +411,17 @@ export default function FlashcardsScreen() {
           <Text style={[styles.emptySubtext, { color: navTheme.colors.text }]}>
             Start by creating your first deck or adding some flashcards to get started with your studies!
           </Text>
-          
+
           <View style={styles.emptyActions}>
-            <TouchableOpacity 
-              style={[styles.emptyButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+            <TouchableOpacity
+              style={[styles.emptyButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}
               onPress={() => setShowDeckSelector(true)}
             >
               <Text style={[styles.emptyButtonText, { color: navTheme.colors.text }]}>➕ Create Deck</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.emptyButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+
+            <TouchableOpacity
+              style={[styles.emptyButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}
               onPress={() => setShowAIGenerator(true)}
             >
               <Text style={[styles.emptyButtonText, { color: navTheme.colors.text }]}>🤖 Generate with AI</Text>
@@ -441,8 +443,8 @@ export default function FlashcardsScreen() {
               numberOfLines={4}
             />
             <View style={styles.aiButtons}>
-              <TouchableOpacity 
-                style={[styles.button, styles.generateButton]} 
+              <TouchableOpacity
+                style={[styles.button, styles.generateButton]}
                 onPress={generateWithAI}
                 disabled={isGenerating}
               >
@@ -450,8 +452,8 @@ export default function FlashcardsScreen() {
                   {isGenerating ? '🔄 Generating...' : '🚀 Generate Cards'}
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.button, styles.cancelButton]} 
+              <TouchableOpacity
+                style={[styles.button, styles.cancelButton]}
                 onPress={() => setShowAIGenerator(false)}
               >
                 <Text style={styles.buttonText}>❌ Cancel</Text>
@@ -523,8 +525,8 @@ export default function FlashcardsScreen() {
             numberOfLines={4}
           />
           <View style={styles.aiButtons}>
-            <TouchableOpacity 
-              style={[styles.button, styles.generateButton]} 
+            <TouchableOpacity
+              style={[styles.button, styles.generateButton]}
               onPress={generateWithAI}
               disabled={isGenerating}
             >
@@ -532,8 +534,8 @@ export default function FlashcardsScreen() {
                 {isGenerating ? '🔄 Generating...' : '🚀 Generate Cards'}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.button, styles.cancelButton]} 
+            <TouchableOpacity
+              style={[styles.button, styles.cancelButton]}
               onPress={() => setShowAIGenerator(false)}
             >
               <Text style={styles.buttonText}>❌ Cancel</Text>
@@ -544,8 +546,8 @@ export default function FlashcardsScreen() {
 
       {/* Flashcard Display */}
       <View style={styles.cardContainer}>
-        <TouchableOpacity 
-          style={[styles.card, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+        <TouchableOpacity
+          style={[styles.card, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}
           onPress={currentCard ? flipCard : null}
           activeOpacity={currentCard ? 0.9 : 1}
         >
@@ -560,46 +562,55 @@ export default function FlashcardsScreen() {
               }]
             }
           ]}>
+            <Animated.View style={{
+              transform: [{
+                rotateY: flipAnimation.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0deg', '-180deg']  // Counter-rotate the content to make text appear normal
+                })
+              }]
+            }}>
             <Text style={[styles.cardText, { color: navTheme.colors.text }]}>
-            {isFlipped ? currentCard?.back || 'No answer available' : currentCard?.front || 'No question available'}
-          </Text>
+              {isFlipped ? currentCard?.back || 'No answer available' : currentCard?.front || 'No question available'}
+            </Text>
+            </Animated.View>
             <Text style={[styles.flipHint, { color: navTheme.colors.text }]}>
-            {isFlipped ? '👆 Tap to see question' : '👆 Tap to see answer'}
-          </Text>
+              {isFlipped ? '👆 Tap to see question' : '👆 Tap to see answer'}
+            </Text>
           </Animated.View>
         </TouchableOpacity>
       </View>
 
       {/* Navigation Controls */}
       <View style={styles.controls}>
-        <TouchableOpacity 
-          style={[styles.navButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }, currentCardIndex === 0 && styles.disabledButton]} 
-          onPress={prevCard} 
+        <TouchableOpacity
+          style={[styles.navButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }, currentCardIndex === 0 && styles.disabledButton]}
+          onPress={prevCard}
           disabled={currentCardIndex === 0}
         >
           <Text style={[styles.navButtonText, currentCardIndex === 0 && styles.disabledText]}>◀️</Text>
         </TouchableOpacity>
-        
+
         <View style={styles.progressIndicator}>
           <View style={styles.progressBar}>
-            <View 
+            <View
               style={[
-                styles.progressFill, 
-                { 
+                styles.progressFill,
+                {
                   width: `${((currentCardIndex + 1) / flashcards.length) * 100}%`,
                   backgroundColor: navTheme.colors.primary || '#6366F1'
                 }
-              ]} 
+              ]}
             />
           </View>
           <Text style={[styles.progressText, { color: navTheme.colors.text }]}>
             {currentCardIndex + 1} / {flashcards.length}
           </Text>
         </View>
-        
-        <TouchableOpacity 
-          style={[styles.navButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }, currentCardIndex === flashcards.length - 1 && styles.disabledButton]} 
-          onPress={nextCard} 
+
+        <TouchableOpacity
+          style={[styles.navButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }, currentCardIndex === flashcards.length - 1 && styles.disabledButton]}
+          onPress={nextCard}
           disabled={currentCardIndex === flashcards.length - 1}
         >
           <Text style={[styles.navButtonText, currentCardIndex === flashcards.length - 1 && styles.disabledText]}>▶️</Text>
@@ -608,44 +619,44 @@ export default function FlashcardsScreen() {
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
-        <TouchableOpacity 
-          style={[styles.button, styles.addButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+        <TouchableOpacity
+          style={[styles.button, styles.addButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}
           onPress={() => setShowAddForm(true)}
         >
           <Text style={[styles.buttonText, { color: navTheme.colors.text }]}>➕ Add Card</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.button, styles.aiButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+
+        <TouchableOpacity
+          style={[styles.button, styles.aiButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}
           onPress={() => setShowAIGenerator(true)}
         >
           <Text style={[styles.buttonText, { color: navTheme.colors.text }]}>🤖 Generate with AI</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.button, styles.shuffleButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+
+        <TouchableOpacity
+          style={[styles.button, styles.shuffleButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}
           onPress={shuffleCards}
         >
           <Text style={[styles.buttonText, { color: navTheme.colors.text }]}>🔀 Shuffle</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.button, styles.shareButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+
+        <TouchableOpacity
+          style={[styles.button, styles.shareButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}
           onPress={shareDeck}
         >
           <Text style={[styles.buttonText, { color: navTheme.colors.text }]}>📤 Share Deck</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.button, styles.deleteButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+
+        <TouchableOpacity
+          style={[styles.button, styles.deleteButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}
           onPress={() => currentCard && deleteCard(currentCard.id)}
           disabled={!currentCard}
         >
           <Text style={[styles.buttonText, { color: navTheme.colors.text }]}>🗑️ Delete Card</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.button, styles.exportButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]} 
+
+        <TouchableOpacity
+          style={[styles.button, styles.exportButton, { backgroundColor: navTheme.colors.card, borderColor: navTheme.colors.border }]}
           onPress={exportCards}
         >
           <Text style={[styles.buttonText, { color: navTheme.colors.text }]}>📁 Export Deck</Text>
