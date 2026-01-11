@@ -370,3 +370,5 @@ Made with ❤️ for smarter learning
 ⭐ Star this repository if you find it useful
 
 </div>
+#   S t u d y M a t e  
+ 
