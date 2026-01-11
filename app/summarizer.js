@@ -69,8 +69,9 @@ export default function SummarizerScreen() {
       }
 
       // For PDF, DOC, DOCX, upload to backend for extraction
+      // Note: pdf-lib doesn't support text extraction, so we use backend service for all document types
       if (['pdf', 'doc', 'docx'].includes(fileType)) {
-        await uploadFileToBackend(document);
+        await extractPdfText(document);
       } else {
         Alert.alert('Unsupported Format', `File type .${fileType} is not supported.`);
       }
@@ -78,6 +79,30 @@ export default function SummarizerScreen() {
     } catch (error) {
       console.error('Error picking document:', error);
       Alert.alert('Error', 'Failed to pick document. Please try again.');
+    }
+  };
+
+  // Extract text from documents using backend service
+  // Note: pdf-lib doesn't support text extraction, so we use backend service for all document types
+  const extractPdfText = async (fileAsset) => {
+    setIsUploading(true);
+    try {
+      // Fall back to backend service since pdf-lib doesn't support text extraction
+      await uploadFileToBackend(fileAsset);
+    } catch (error) {
+      console.error('Document processing error:', error);
+      
+      let errorMessage = 'Could not process this document.';
+      
+      if (error.message.includes('No text found')) {
+        errorMessage = error.message;
+      } else {
+        errorMessage = `Document processing failed: ${error.message}`;
+      }
+      
+      Alert.alert('Processing Failed', errorMessage);
+    } finally {
+      setIsUploading(false);
     }
   };
 

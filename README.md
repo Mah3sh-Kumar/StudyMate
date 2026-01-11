@@ -1,14 +1,7 @@
-<<<<<<< HEAD
-
-<div align="center">
-
-# 📚 StudyMate
-
-=======
 <div align="center">
 
 # 📚 StudyMate  
->>>>>>> 6581dbfdf4587d0401c1514cb44ef7280bd9d57e
+
 ### AI-Powered Study Assistant
 
 **Supercharge Your Learning with Intelligent Tools**
@@ -57,28 +50,15 @@ By combining advanced AI models with a mobile-first interface, StudyMate enables
 
 Key capabilities include:
 
-<<<<<<< HEAD
-- **Intelligent Processing** – AI-powered summarization and content analysis
-- **Cloud Synchronization** – Secure multi-device data persistence via Supabase
-- **Adaptive Learning** – Personalized schedules, quizzes, and progress tracking
-=======
-
 - **Intelligent Processing** – AI-powered summarization and content analysis  
 - **Cloud Synchronization** – Secure multi-device data persistence via Supabase  
 - **Adaptive Learning** – Personalized schedules, quizzes, and progress tracking  
->>>>>>> 6581dbfdf4587d0401c1514cb44ef7280bd9d57e
 
 ---
 
 ## ✨ Features
 
 ### 🧠 AI-Powered Tools
-
-<<<<<<< HEAD
-- **Smart Summarizer**Convert long notes, PDFs, and textbooks into concise, exam-oriented summaries.
-- **Quiz Generator**Automatically generate structured multiple-choice quizzes from study material.
-- **Flashcard Creator**Create interactive flashcards optimized for active recall and spaced repetition.
-=======
 
 - **Smart Summarizer**  
   Convert long notes, PDFs, and textbooks into concise, exam-oriented summaries.
@@ -89,7 +69,6 @@ Key capabilities include:
 - **Flashcard Creator**  
   Create interactive flashcards optimized for active recall and spaced repetition.
 
->>>>>>> 6581dbfdf4587d0401c1514cb44ef7280bd9d57e
 - **AI Chat Assistant**
   Context-aware conversational assistant for instant explanations and doubt solving.
 
@@ -97,17 +76,12 @@ Key capabilities include:
 
 ### ⚡ Productivity & Study Management
 
-<<<<<<< HEAD
-- **Study Planner**Auto-generate personalized study schedules based on goals and deadlines.
-- **Hands-Free Mode**Voice-controlled studying using speech-to-text and text-to-speech.
-=======
 - **Study Planner**  
   Auto-generate personalized study schedules based on goals and deadlines.
 
 - **Hands-Free Mode**  
   Voice-controlled studying using speech-to-text and text-to-speech.
 
->>>>>>> 6581dbfdf4587d0401c1514cb44ef7280bd9d57e
 - **Time Tracker**
   Focus timers (Pomodoro) with analytics on productivity and consistency.
 
@@ -115,17 +89,12 @@ Key capabilities include:
 
 ### 👥 Collaboration & Analytics
 
-<<<<<<< HEAD
-- **Study Groups**Share quizzes, flashcards, and notes with peers in real time.
-- **Performance Metrics**Visual insights into quiz scores, topic mastery, and study streaks.
-=======
 - **Study Groups**  
   Share quizzes, flashcards, and notes with peers in real time.
 
 - **Performance Metrics**  
   Visual insights into quiz scores, topic mastery, and study streaks.
 
->>>>>>> 6581dbfdf4587d0401c1514cb44ef7280bd9d57e
 - **Leaderboards**
   Gamified learning to increase motivation and consistency.
 
@@ -164,29 +133,6 @@ Key capabilities include:
 - Realtime sync for collaborative features
 
 #### AI Layer
-
-- OpenAI API for summarization, quizzes, chat, and embeddings
-<<<<<<< HEAD
-- React Native with Expo for cross-platform support
-- Local caching for offline study
-- Voice module for hands-free interaction
-=======
-- React Native with Expo for cross-platform support  
-- Local caching for offline study  
-- Voice module for hands-free interaction  
->>>>>>> 6581dbfdf4587d0401c1514cb44ef7280bd9d57e
-
-#### Cloud Layer (Backend)
-
-- Supabase Authentication (JWT-based)
-- PostgreSQL database for structured data
-- Realtime sync for collaborative features
-
-#### AI Layer
-<<<<<<< HEAD
-
-=======
->>>>>>> 6581dbfdf4587d0401c1514cb44ef7280bd9d57e
 - OpenAI API for summarization, quizzes, chat, and embeddings
 
 ---
@@ -197,13 +143,8 @@ Key capabilities include:
 
 Ensure the following are installed:
 
-<<<<<<< HEAD
-- Node.js v16 or higher
-- npm or yarn
-=======
 - Node.js v16 or higher  
 - npm or yarn  
->>>>>>> 6581dbfdf4587d0401c1514cb44ef7280bd9d57e
 - Expo CLI
   ```bash
   npm install -g expo-cli
@@ -318,10 +259,6 @@ StudyMate/
 └── README.md
 ```
 
-<<<<<<< HEAD
-=======
-
->>>>>>> 6581dbfdf4587d0401c1514cb44ef7280bd9d57e
 ## 🔧 Troubleshooting
 
 ### API Key Invalid
@@ -370,5 +307,3 @@ Made with ❤️ for smarter learning
 ⭐ Star this repository if you find it useful
 
 </div>
-#   S t u d y M a t e  
- 
